@@ -1,0 +1,34 @@
+<Window x:Class="Friday.UI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="智能错题本 - Smart Wrong Answer Book" Height="600" Width="900"
+        WindowStartupLocation="CenterScreen">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="200" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Sidebar Navigation -->
+        <StackPanel Grid.Column="0" Background="#F0F0F0">
+            <TextBlock Text="智能错题本" FontSize="18" FontWeight="Bold"
+                       Margin="15" HorizontalAlignment="Center" />
+            <Separator Margin="10" />
+
+            <Button Content="🏠 首页" Margin="10,5" Padding="10"
+                    Click="Home_Click" IsEnabled="False" />
+            <Button Content="📚 科目管理" Margin="10,5" Padding="10"
+                    Click="Subjects_Click" />
+            <Button Content="📝 错题列表" Margin="10,5" Padding="10"
+                    Click="Questions_Click" IsEnabled="False" />
+            <Button Content="📖 复习" Margin="10,5" Padding="10"
+                    Click="Review_Click" IsEnabled="False" />
+            <Button Content="⚙️ 设置" Margin="10,5" Padding="10"
+                    Click="Settings_Click" IsEnabled="False" />
+        </StackPanel>
+
+        <!-- Content Area -->
+        <ContentControl Grid.Column="1"
+                        Content="{Binding CurrentViewModel}" />
+    </Grid>
+</Window>
