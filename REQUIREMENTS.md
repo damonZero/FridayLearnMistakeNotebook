@@ -15,56 +15,17 @@
 - **最低版本：** Android 8.0 (API 26)
 - **目标版本：** Android 14 (API 34)
 
-### 0.2 开发标准
-**必须使用 Android 原生开发技术栈：**
+### 0.2 开发约束
 
-| 项目 | 标准 |
+| 约束 | 说明 |
 |------|------|
-| **开发语言** | Kotlin |
-| **UI 框架** | Jetpack Compose |
-| **架构模式** | MVVM + Clean Architecture |
-| **数据库** | Room (SQLite) |
-| **依赖注入** | Hilt |
-| **异步处理** | Kotlin Coroutines + Flow |
-| **构建工具** | Gradle (Kotlin DSL) |
-| **最低 SDK** | API 26 (Android 8.0) |
-| **目标 SDK** | API 34 (Android 14) |
+| **平台** | Android 原生 |
+| **输出物** | APK 安装包 |
+| **最低版本** | Android 8.0 (API 26) |
+| **目标版本** | Android 14 (API 34) |
+| **架构** | MVVM + Clean Architecture |
 
-### 0.3 项目结构
-```
-app/
-├── src/main/
-│   ├── java/com/friday/learnmistake/
-│   │   ├── data/           # 数据层
-│   │   │   ├── local/      # 本地数据库 (Room)
-│   │   │   ├── remote/     # 网络请求 (Retrofit)
-│   │   │   └── repository/ # 仓库实现
-│   │   ├── domain/         # 领域层
-│   │   │   ├── model/      # 数据模型
-│   │   │   ├── repository/ # 仓库接口
-│   │   │   └── usecase/    # 用例
-│   │   ├── presentation/   # 表现层
-│   │   │   ├── ui/         # Compose UI
-│   │   │   └── viewmodel/  # ViewModel
-│   │   └── di/             # 依赖注入 (Hilt)
-│   └── res/                # 资源文件
-└── build.gradle.kts        # 构建配置
-```
-
-### 0.4 必须使用的库
-| 类别 | 库 | 用途 |
-|------|-----|------|
-| UI | Jetpack Compose | 声明式 UI |
-| UI | Material 3 | Material Design 组件 |
-| 导航 | Navigation Compose | 页面导航 |
-| 数据库 | Room | 本地 SQLite |
-| 网络 | Retrofit + OkHttp | API 请求 |
-| 序列化 | Kotlinx Serialization | JSON 解析 |
-| 依赖注入 | Hilt | 依赖注入 |
-| 图片 | Coil | 图片加载 |
-| 相机 | CameraX | 摄像头调用 |
-| 权限 | Accompanist | 运行时权限 |
-| 异步 | Coroutines + Flow | 异步处理 |
+具体技术选型（语言、UI框架、数据库等）由 AI 根据最佳实践自行决定。
 
 ---
 
@@ -209,298 +170,40 @@ app/
 
 ## 4. 技术架构
 
-### 4.1 技术栈
+### 4.1 架构原则
 
-| 层级 | 技术 | 说明 |
-|------|------|------|
-| **开发语言** | Kotlin | Android 官方推荐语言 |
-| **UI 框架** | Jetpack Compose | 声明式 UI |
-| **UI 组件** | Material 3 | Material Design 3 |
-| **架构模式** | MVVM + Clean Architecture | 分层架构 |
-| **数据库** | Room (SQLite) | 本地数据存储 |
-| **网络请求** | Retrofit + OkHttp | API 调用 |
-| **依赖注入** | Hilt | 依赖注入框架 |
-| **异步处理** | Coroutines + Flow | 异步编程 |
-| **图片加载** | Coil | 图片加载库 |
-| **摄像头** | CameraX | 相机调用 |
-| **权限管理** | Accompanist Permissions | 运行时权限 |
-| **序列化** | Kotlinx Serialization | JSON 解析 |
-| **构建工具** | Gradle (Kotlin DSL) | 项目构建 |
-| **测试** | JUnit + Espresso | 单元测试 + UI 测试 |
+- **MVVM 模式：** Model-View-ViewModel 分离关注点
+- **Clean Architecture：** 分层架构，依赖方向从外到内
+- **单一职责：** 每个类/模块只负责一件事
+- **依赖倒置：** 依赖抽象而非具体实现
 
-### 4.2 项目结构
+### 4.2 分层结构
 
-```
-app/
-├── src/
-│   ├── main/
-│   │   ├── java/com/friday/learnmistake/
-│   │   │   ├── App.kt                          # Application 类
-│   │   │   ├── MainActivity.kt                  # 主 Activity
-│   │   │   │
-│   │   │   ├── data/                            # 数据层
-│   │   │   │   ├── local/
-│   │   │   │   │   ├── AppDatabase.kt           # Room 数据库
-│   │   │   │   │   ├── dao/                     # 数据访问对象
-│   │   │   │   │   │   ├── SubjectDao.kt
-│   │   │   │   │   │   ├── ChapterDao.kt
-│   │   │   │   │   │   ├── KnowledgePointDao.kt
-│   │   │   │   │   │   ├── QuestionDao.kt
-│   │   │   │   │   │   ├── AiConfigDao.kt
-│   │   │   │   │   │   └── AiUsageLogDao.kt
-│   │   │   │   │   └── entity/                  # Room 实体
-│   │   │   │   │       ├── SubjectEntity.kt
-│   │   │   │   │       ├── ChapterEntity.kt
-│   │   │   │   │       ├── KnowledgePointEntity.kt
-│   │   │   │   │       ├── QuestionEntity.kt
-│   │   │   │   │       ├── AiConfigEntity.kt
-│   │   │   │   │       └── AiUsageLogEntity.kt
-│   │   │   │   ├── remote/                      # 网络请求
-│   │   │   │   │   ├── api/
-│   │   │   │   │   │   ├── VolcanoArkApi.kt     # 火山方舟 API
-│   │   │   │   │   │   └── DeepSeekApi.kt       # DeepSeek API
-│   │   │   │   │   └── dto/                     # 数据传输对象
-│   │   │   │   └── repository/                  # 仓库实现
-│   │   │   │       ├── SubjectRepositoryImpl.kt
-│   │   │   │       ├── QuestionRepositoryImpl.kt
-│   │   │   │       ├── AiRepositoryImpl.kt
-│   │   │   │       └── BackupRepositoryImpl.kt
-│   │   │   │
-│   │   │   ├── domain/                          # 领域层
-│   │   │   │   ├── model/                       # 领域模型
-│   │   │   │   │   ├── Subject.kt
-│   │   │   │   │   ├── Chapter.kt
-│   │   │   │   │   ├── KnowledgePoint.kt
-│   │   │   │   │   ├── Question.kt
-│   │   │   │   │   ├── ErrorType.kt
-│   │   │   │   │   └── ReviewSchedule.kt
-│   │   │   │   ├── repository/                  # 仓库接口
-│   │   │   │   │   ├── SubjectRepository.kt
-│   │   │   │   │   ├── QuestionRepository.kt
-│   │   │   │   │   └── AiRepository.kt
-│   │   │   │   └── usecase/                     # 用例
-│   │   │   │       ├── subject/
-│   │   │   │       │   ├── GetSubjectsUseCase.kt
-│   │   │   │       │   ├── AddSubjectUseCase.kt
-│   │   │   │       │   └── DeleteSubjectUseCase.kt
-│   │   │   │       ├── question/
-│   │   │   │       │   ├── AddQuestionUseCase.kt
-│   │   │   │       │   ├── GetQuestionsUseCase.kt
-│   │   │   │       │   └── UpdateQuestionUseCase.kt
-│   │   │   │       ├── review/
-│   │   │   │       │   ├── GetReviewQuestionsUseCase.kt
-│   │   │   │       │   ├── MarkReviewResultUseCase.kt
-│   │   │   │       │   └── CalculateNextReviewUseCase.kt
-│   │   │   │       └── ai/
-│   │   │   │           ├── RecognizeImageUseCase.kt
-│   │   │   │           ├── AnalyzeQuestionUseCase.kt
-│   │   │   │           └── GenerateSimilarUseCase.kt
-│   │   │   │
-│   │   │   ├── presentation/                    # 表现层
-│   │   │   │   ├── navigation/                  # 导航
-│   │   │   │   │   └── AppNavigation.kt
-│   │   │   │   ├── screen/                      # 页面
-│   │   │   │   │   ├── home/
-│   │   │   │   │   │   ├── HomeScreen.kt
-│   │   │   │   │   │   └── HomeViewModel.kt
-│   │   │   │   │   ├── subject/
-│   │   │   │   │   │   ├── SubjectListScreen.kt
-│   │   │   │   │   │   ├── SubjectListViewModel.kt
-│   │   │   │   │   │   ├── AddSubjectDialog.kt
-│   │   │   │   │   │   └── SubjectDetailScreen.kt
-│   │   │   │   │   ├── question/
-│   │   │   │   │   │   ├── QuestionListScreen.kt
-│   │   │   │   │   │   ├── QuestionListViewModel.kt
-│   │   │   │   │   │   ├── AddQuestionScreen.kt
-│   │   │   │   │   │   └── AddQuestionViewModel.kt
-│   │   │   │   │   ├── review/
-│   │   │   │   │   │   ├── ReviewScreen.kt
-│   │   │   │   │   │   ├── ReviewViewModel.kt
-│   │   │   │   │   │   └── ReviewResultScreen.kt
-│   │   │   │   │   ├── camera/
-│   │   │   │   │   │   ├── CameraScreen.kt
-│   │   │   │   │   │   ├── CameraViewModel.kt
-│   │   │   │   │   │   └── ImageCropScreen.kt
-│   │   │   │   │   ├── settings/
-│   │   │   │   │   │   ├── SettingsScreen.kt
-│   │   │   │   │   │   ├── SettingsViewModel.kt
-│   │   │   │   │   │   ├── AiConfigScreen.kt
-│   │   │   │   │   │   └── AiConfigViewModel.kt
-│   │   │   │   │   └── statistics/
-│   │   │   │   │       ├── StatisticsScreen.kt
-│   │   │   │   │       └── StatisticsViewModel.kt
-│   │   │   │   ├── component/                   # 通用组件
-│   │   │   │   │   ├── SubjectCard.kt
-│   │   │   │   │   ├── QuestionCard.kt
-│   │   │   │   │   ├── ReviewCard.kt
-│   │   │   │   │   ├── StatCard.kt
-│   │   │   │   │   └── LoadingIndicator.kt
-│   │   │   │   └── theme/                       # 主题
-│   │   │   │       ├── Theme.kt
-│   │   │   │       ├── Color.kt
-│   │   │   │       └── Type.kt
-│   │   │   │
-│   │   │   └── di/                              # 依赖注入
-│   │   │       ├── AppModule.kt
-│   │   │       ├── DatabaseModule.kt
-│   │   │       ├── NetworkModule.kt
-│   │   │       └── RepositoryModule.kt
-│   │   │
-│   │   ├── res/                                 # 资源文件
-│   │   │   ├── values/
-│   │   │   │   ├── strings.xml                  # 字符串资源
-│   │   │   │   ├── colors.xml                   # 颜色资源
-│   │   │   │   └── themes.xml                   # 主题资源
-│   │   │   ├── drawable/                        # 图片资源
-│   │   │   └── mipmap/                          # 应用图标
-│   │   │
-│   │   └── AndroidManifest.xml                  # 清单文件
-│   │
-│   └── test/                                    # 单元测试
-│       └── java/com/friday/learnmistake/
-│           ├── domain/usecase/
-│           └── data/repository/
-│
-├── build.gradle.kts                             # 项目构建文件
-└── app/build.gradle.kts                         # 模块构建文件
-```
+| 层级 | 职责 |
+|------|------|
+| **Presentation** | UI 界面、用户交互、状态管理 |
+| **Domain** | 业务逻辑、用例、领域模型 |
+| **Data** | 数据存储、网络请求、仓库实现 |
 
 ### 4.3 数据模型
 
-#### Subject（科目）
-```kotlin
-@Entity(tableName = "subjects")
-data class SubjectEntity(
-    @PrimaryKey val id: String,           // UUID
-    val name: String,                     // 科目名称
-    val icon: String?,                    // 图标
-    val color: String?,                   // 颜色
-    val sortOrder: Int = 0,              // 排序
-    val isPreset: Boolean = false,       // 是否预设
-    val createdAt: Long,                 // 创建时间
-    val updatedAt: Long                  // 更新时间
-)
-```
+核心实体（具体实现由 AI 决定）：
 
-#### Chapter（章节）
-```kotlin
-@Entity(
-    tableName = "chapters",
-    foreignKeys = [ForeignKey(
-        entity = SubjectEntity::class,
-        parentColumns = ["id"],
-        childColumns = ["subjectId"],
-        onDelete = ForeignKey.CASCADE
-    )]
-)
-data class ChapterEntity(
-    @PrimaryKey val id: String,
-    val subjectId: String,
-    val name: String,
-    val sortOrder: Int = 0,
-    val createdAt: Long,
-    val updatedAt: Long
-)
-```
+| 实体 | 说明 | 关键字段 |
+|------|------|----------|
+| **Subject** | 科目 | id, name, icon, color, isPreset |
+| **Chapter** | 章节 | id, subjectId, name |
+| **KnowledgePoint** | 知识点 | id, chapterId, name, description |
+| **Question** | 错题 | id, subjectId, chapterId, knowledgePointId, content, answer, userAnswer, errorType, imagePath, reviewDate, leitnerBox, easeFactor, intervalDays, streak |
+| **AiConfig** | AI配置 | id, provider, apiKey, baseUrl, modelName, taskType, isEnabled |
+| **AiUsageLog** | AI使用日志 | id, provider, taskType, modelName, inputTokens, outputTokens, estimatedCost |
 
-#### KnowledgePoint（知识点）
-```kotlin
-@Entity(
-    tableName = "knowledge_points",
-    foreignKeys = [ForeignKey(
-        entity = ChapterEntity::class,
-        parentColumns = ["id"],
-        childColumns = ["chapterId"],
-        onDelete = ForeignKey.CASCADE
-    )]
-)
-data class KnowledgePointEntity(
-    @PrimaryKey val id: String,
-    val chapterId: String,
-    val name: String,
-    val description: String?,
-    val sortOrder: Int = 0,
-    val createdAt: Long,
-    val updatedAt: Long
-)
-```
-
-#### Question（错题）
-```kotlin
-@Entity(
-    tableName = "questions",
-    foreignKeys = [
-        ForeignKey(entity = SubjectEntity::class, parentColumns = ["id"], childColumns = ["subjectId"], onDelete = ForeignKey.SET_NULL),
-        ForeignKey(entity = ChapterEntity::class, parentColumns = ["id"], childColumns = ["chapterId"], onDelete = ForeignKey.SET_NULL),
-        ForeignKey(entity = KnowledgePointEntity::class, parentColumns = ["id"], childColumns = ["knowledgePointId"], onDelete = ForeignKey.SET_NULL)
-    ]
-)
-data class QuestionEntity(
-    @PrimaryKey val id: String,
-    val subjectId: String?,
-    val chapterId: String?,
-    val knowledgePointId: String?,
-    val content: String,                 // 题目内容
-    val answer: String?,                 // 正确答案
-    val userAnswer: String?,             // 用户答案
-    val errorType: String = "UNKNOWN",   // 错误类型
-    val imagePath: String?,              // 图片路径
-    val notes: String?,                  // 备注
-    val reviewDate: Long?,               // 下次复习时间
-    val leitnerBox: Int = 1,            // 莱特纳盒子 (1-5)
-    val easeFactor: Double = 2.5,       // 难度系数
-    val intervalDays: Int = 1,          // 复习间隔天数
-    val streak: Int = 0,                // 连续答对次数
-    val createdAt: Long,
-    val updatedAt: Long
-)
-```
-
-#### ErrorType（错误类型枚举）
-```kotlin
-enum class ErrorType {
-    UNKNOWN,        // 未知
-    CARELESS,       // 粗心
-    CONCEPTUAL,     // 概念错误
-    METHOD,         // 方法错误
-    CALCULATION     // 计算错误
-}
-```
-
-#### AiConfig（AI 配置）
-```kotlin
-@Entity(tableName = "ai_configs")
-data class AiConfigEntity(
-    @PrimaryKey val id: String,
-    val provider: String,                // 提供商: volcano_ark, deepseek, openai, claude
-    val apiKey: String,                  // API Key
-    val baseUrl: String?,                // 自定义 Base URL
-    val modelName: String?,              // 模型名称
-    val taskType: String,                // 任务类型: ocr, analysis, generation
-    val isEnabled: Boolean = true,       // 是否启用
-    val createdAt: Long,
-    val updatedAt: Long
-)
-```
-
-#### AiUsageLog（AI 使用日志）
-```kotlin
-@Entity(tableName = "ai_usage_logs")
-data class AiUsageLogEntity(
-    @PrimaryKey val id: String,
-    val provider: String,
-    val taskType: String,
-    val modelName: String,
-    val inputTokens: Int,
-    val outputTokens: Int,
-    val totalTokens: Int,
-    val estimatedCost: Double,           // 预估费用（人民币）
-    val requestId: String?,
-    val isSuccess: Boolean,
-    val errorMessage: String?,
-    val createdAt: Long
-)
-```
+#### 错误类型枚举
+- UNKNOWN - 未知
+- CARELESS - 粗心
+- CONCEPTUAL - 概念错误
+- METHOD - 方法错误
+- CALCULATION - 计算错误
 
 ---
 
