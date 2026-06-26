@@ -49,6 +49,7 @@ public partial class App : System.Windows.Application
         services.AddScoped<ISubjectRepository, SubjectRepository>();
         services.AddScoped<IChapterRepository, ChapterRepository>();
         services.AddScoped<IKnowledgePointRepository, KnowledgePointRepository>();
+        services.AddScoped<IQuestionRepository, QuestionRepository>();
 
         // Services
         services.AddScoped<SubjectService>();
@@ -57,6 +58,9 @@ public partial class App : System.Windows.Application
         // ViewModels
         services.AddTransient<MainViewModel>();
         services.AddTransient<SubjectListViewModel>();
+        services.AddTransient<SubjectManagementViewModel>();
+        services.AddTransient<KnowledgeTreeViewModel>();
+        services.AddTransient<QuestionListViewModel>();
 
         // Main Window
         services.AddSingleton<MainWindow>();

@@ -19,8 +19,12 @@
                     Click="Home_Click" IsEnabled="False" />
             <Button Content="📚 科目管理" Margin="10,5" Padding="10"
                     Click="Subjects_Click" />
+            <Button Content="🌳 知识树" Margin="10,5" Padding="10"
+                    Click="KnowledgeTree_Click" />
             <Button Content="📝 错题列表" Margin="10,5" Padding="10"
-                    Click="Questions_Click" IsEnabled="False" />
+                    Click="Questions_Click" />
+            <Button Content="➕ 添加错题" Margin="10,5" Padding="10"
+                    Click="AddQuestion_Click" IsEnabled="False" />
             <Button Content="📖 复习" Margin="10,5" Padding="10"
                     Click="Review_Click" IsEnabled="False" />
             <Button Content="⚙️ 设置" Margin="10,5" Padding="10"

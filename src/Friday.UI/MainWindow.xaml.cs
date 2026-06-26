@@ -24,13 +24,25 @@ public partial class MainWindow : Window
 
     private void Subjects_Click(object sender, RoutedEventArgs e)
     {
-        var subjectListViewModel = _serviceProvider.GetRequiredService<SubjectListViewModel>();
-        _viewModel.CurrentViewModel = subjectListViewModel;
+        var subjectManagementViewModel = _serviceProvider.GetRequiredService<SubjectManagementViewModel>();
+        _viewModel.CurrentViewModel = subjectManagementViewModel;
+    }
+
+    private void KnowledgeTree_Click(object sender, RoutedEventArgs e)
+    {
+        var knowledgeTreeViewModel = _serviceProvider.GetRequiredService<KnowledgeTreeViewModel>();
+        _viewModel.CurrentViewModel = knowledgeTreeViewModel;
     }
 
     private void Questions_Click(object sender, RoutedEventArgs e)
     {
-        // Coming soon
+        var questionListViewModel = _serviceProvider.GetRequiredService<QuestionListViewModel>();
+        _viewModel.CurrentViewModel = questionListViewModel;
+    }
+
+    private void AddQuestion_Click(object sender, RoutedEventArgs e)
+    {
+        // Coming soon - will be wired in Task 3
     }
 
     private void Review_Click(object sender, RoutedEventArgs e)

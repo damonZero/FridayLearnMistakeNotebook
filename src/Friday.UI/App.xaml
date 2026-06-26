@@ -8,5 +8,14 @@
         <DataTemplate DataType="{x:Type vm:SubjectListViewModel}">
             <views:SubjectListView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:SubjectManagementViewModel}">
+            <views:SubjectManagementView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:KnowledgeTreeViewModel}">
+            <views:KnowledgeTreeView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:QuestionListViewModel}">
+            <views:QuestionListView />
+        </DataTemplate>
     </Application.Resources>
 </Application>
