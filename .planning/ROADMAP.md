@@ -13,7 +13,7 @@ The Smart Wrong Answer Book builds a photo-to-review learning loop for elementar
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation** - Domain model, database, subject management, WPF shell with base UI
+- [x] **Phase 1: Foundation** - Domain model, database, subject management, WPF shell with base UI (completed 2026-06-26)
 - [ ] **Phase 2: Capture Pipeline** - Camera capture, image processing, OCR with correction, batch import
 - [ ] **Phase 3: Review Engine** - Spaced repetition algorithm, daily review queue, review session UI
 - [ ] **Phase 4: AI Intelligence** - Knowledge analysis, error classification, AI model configuration
@@ -144,7 +144,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 3/3 | Complete | 2026-06-26 |
+| 1. Foundation | 3/3 | Complete    | 2026-06-26 |
 | 2. Capture Pipeline | 0/3 | Not started | - |
 | 3. Review Engine | 0/3 | Not started | - |
 | 4. AI Intelligence | 0/3 | Not started | - |

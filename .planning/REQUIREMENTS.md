@@ -56,7 +56,7 @@
 
 ### Data Management (数据管理)
 
-- [ ] **DATA-01**: All data stored locally in SQLite database
+- [x] **DATA-01**: All data stored locally in SQLite database
 - [x] **DATA-02**: System auto-backups data to local file on schedule
 - [x] **DATA-03**: User can export data to JSON format for backup
 - [x] **DATA-04**: User can export data to CSV format for external analysis
@@ -143,7 +143,7 @@
 | AICFG-02 | Phase 4 | Pending |
 | AICFG-03 | Phase 4 | Pending |
 | AICFG-04 | Phase 4 | Pending |
-| DATA-01 | Phase 1 | Pending |
+| DATA-01 | Phase 1 | Complete |
 | DATA-02 | Phase 1 | Done |
 | DATA-03 | Phase 1 | Done |
 | DATA-04 | Phase 1 | Done |
@@ -166,6 +166,7 @@
 | UI-05 | Phase 1 | Done |
 
 **Coverage:**
+
 - v1 requirements: 55 total (mapped from 8 categories: PHOTO, SUBJ, KNOW, REV, AICFG, DATA, ANA, UI)
 - Mapped to phases: 55
 - Unmapped: 0
