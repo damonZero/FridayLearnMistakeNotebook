@@ -57,4 +57,10 @@ sealed class Screen(val route: String) {
 
     // AI 使用统计
     object AiUsage : Screen("ai_usage")
+
+    // 数据备份
+    object Backup : Screen("backup")
+
+    // 成就系统
+    object Achievement : Screen("achievement")
 }

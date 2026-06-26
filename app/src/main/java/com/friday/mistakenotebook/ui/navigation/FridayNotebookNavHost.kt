@@ -23,6 +23,8 @@ import com.friday.mistakenotebook.ui.questionlist.QuestionListScreen
 import com.friday.mistakenotebook.ui.stats.StatsScreen
 import com.friday.mistakenotebook.ui.aiconfig.AiConfigScreen
 import com.friday.mistakenotebook.ui.aiusage.AiUsageScreen
+import com.friday.mistakenotebook.ui.backup.BackupScreen
+import com.friday.mistakenotebook.ui.achievement.AchievementScreen
 
 data class BottomNavItem(
     val screen: Screen,
@@ -117,6 +119,12 @@ fun FridayNotebookNavHost() {
             }
             composable(Screen.AiUsage.route) {
                 AiUsageScreen(navController = navController)
+            }
+            composable(Screen.Backup.route) {
+                BackupScreen(navController = navController)
+            }
+            composable(Screen.Achievement.route) {
+                AchievementScreen(navController = navController)
             }
         }
     }

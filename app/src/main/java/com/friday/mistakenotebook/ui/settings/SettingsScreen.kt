@@ -61,19 +61,13 @@ fun SettingsScreen(
                     icon = Icons.Default.Backup,
                     title = "数据备份",
                     subtitle = "备份和恢复错题数据",
-                    onClick = { /* TODO: 导航到备份页面 */ }
+                    onClick = { navController.navigate(Screen.Backup.route) }
                 )
                 SettingsItem(
-                    icon = Icons.Default.FileDownload,
-                    title = "导出数据",
-                    subtitle = "导出为 JSON 文件",
-                    onClick = { /* TODO: 导出功能 */ }
-                )
-                SettingsItem(
-                    icon = Icons.Default.FileUpload,
-                    title = "导入数据",
-                    subtitle = "从 JSON 文件导入",
-                    onClick = { /* TODO: 导入功能 */ }
+                    icon = Icons.Default.EmojiEvents,
+                    title = "成就系统",
+                    subtitle = "查看学习成就",
+                    onClick = { navController.navigate(Screen.Achievement.route) }
                 )
             }
 
