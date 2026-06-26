@@ -18,6 +18,7 @@ import com.friday.mistakenotebook.ui.subject.SubjectsScreen
 import com.friday.mistakenotebook.ui.review.ReviewScreen
 import com.friday.mistakenotebook.ui.settings.SettingsScreen
 import com.friday.mistakenotebook.ui.addquestion.AddQuestionScreen
+import com.friday.mistakenotebook.ui.camera.CameraScreen
 
 data class BottomNavItem(
     val screen: Screen,
@@ -84,6 +85,17 @@ fun FridayNotebookNavHost() {
                 AddQuestionScreen(
                     navController = navController,
                     subjectId = if (subjectId == -1L) null else subjectId
+                )
+            }
+            composable(Screen.Camera.route) {
+                CameraScreen(
+                    navController = navController,
+                    onOcrComplete = { text ->
+                        // 将 OCR 结果传递回添加错题页面
+                        navController.previousBackStackEntry
+                            ?.savedStateHandle
+                            ?.set("ocr_result", text)
+                    }
                 )
             }
         }

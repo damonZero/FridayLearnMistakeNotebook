@@ -97,6 +97,19 @@ dependencies {
     // Gson for JSON
     implementation("com.google.code.gson:gson:2.10.1")
 
+    // CameraX for camera functionality
+    val cameraxVersion = "1.3.1"
+    implementation("androidx.camera:camera-core:$cameraxVersion")
+    implementation("androidx.camera:camera-camera2:$cameraxVersion")
+    implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
+    implementation("androidx.camera:camera-view:$cameraxVersion")
+
+    // Coil for image loading
+    implementation("io.coil-kt:coil-compose:2.5.0")
+
+    // OkHttp for network requests
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
     // Testing
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

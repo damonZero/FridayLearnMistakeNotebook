@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.friday.mistakenotebook.data.local.entity.ErrorType
+import com.friday.mistakenotebook.ui.navigation.Screen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,6 +34,18 @@ fun AddQuestionScreen(
     LaunchedEffect(uiState.isSaved) {
         if (uiState.isSaved) {
             navController.popBackStack()
+        }
+    }
+
+    // 监听 OCR 结果
+    val ocrResult = navController.currentBackStackEntry
+        ?.savedStateHandle
+        ?.getLiveData<String>("ocr_result")
+        ?.value
+
+    LaunchedEffect(ocrResult) {
+        ocrResult?.let {
+            viewModel.updateContent(it)
         }
     }
 
@@ -81,6 +94,18 @@ fun AddQuestionScreen(
             }
 
             Spacer(modifier = Modifier.height(20.dp))
+
+            // 拍照识别按钮
+            OutlinedButton(
+                onClick = { navController.navigate(Screen.Camera.route) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.CameraAlt, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("拍照识别题目")
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             // 题目内容
             OutlinedTextField(

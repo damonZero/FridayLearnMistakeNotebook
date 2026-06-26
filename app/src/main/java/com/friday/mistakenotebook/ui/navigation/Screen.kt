@@ -34,4 +34,7 @@ sealed class Screen(val route: String) {
     // 设置页面
     object AiConfig : Screen("ai_config")
     object DataBackup : Screen("data_backup")
+
+    // 拍照识别
+    object Camera : Screen("camera")
 }
