@@ -17,5 +17,8 @@
         <DataTemplate DataType="{x:Type vm:QuestionListViewModel}">
             <views:QuestionListView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:AddQuestionViewModel}">
+            <views:AddQuestionView />
+        </DataTemplate>
     </Application.Resources>
 </Application>

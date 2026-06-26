@@ -42,7 +42,8 @@ public partial class MainWindow : Window
 
     private void AddQuestion_Click(object sender, RoutedEventArgs e)
     {
-        // Coming soon - will be wired in Task 3
+        var addQuestionViewModel = _serviceProvider.GetRequiredService<AddQuestionViewModel>();
+        _viewModel.CurrentViewModel = addQuestionViewModel;
     }
 
     private void Review_Click(object sender, RoutedEventArgs e)

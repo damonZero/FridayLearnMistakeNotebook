@@ -61,6 +61,7 @@ public partial class App : System.Windows.Application
         services.AddTransient<SubjectManagementViewModel>();
         services.AddTransient<KnowledgeTreeViewModel>();
         services.AddTransient<QuestionListViewModel>();
+        services.AddTransient<AddQuestionViewModel>();
 
         // Main Window
         services.AddSingleton<MainWindow>();
