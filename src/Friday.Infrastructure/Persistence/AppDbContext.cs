@@ -13,6 +13,8 @@ public class AppDbContext : DbContext
     public DbSet<Chapter> Chapters => Set<Chapter>();
     public DbSet<KnowledgePoint> KnowledgePoints => Set<KnowledgePoint>();
     public DbSet<Question> Questions => Set<Question>();
+    public DbSet<AiConfig> AiConfigs => Set<AiConfig>();
+    public DbSet<AiUsageLog> AiUsageLogs => Set<AiUsageLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -79,6 +81,30 @@ public class AppDbContext : DbContext
                   .WithMany(e => e.Questions)
                   .HasForeignKey(e => e.KnowledgePointId)
                   .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<AiConfig>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Provider).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.ApiKey).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.BaseUrl).HasMaxLength(500);
+            entity.Property(e => e.ModelName).HasMaxLength(100);
+            entity.Property(e => e.TaskType).IsRequired().HasMaxLength(50);
+            entity.HasIndex(e => new { e.TaskType, e.IsEnabled });
+        });
+
+        modelBuilder.Entity<AiUsageLog>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Provider).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.TaskType).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.ModelName).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.RequestId).HasMaxLength(100);
+            entity.Property(e => e.ErrorMessage).HasMaxLength(2000);
+            entity.Property(e => e.EstimatedCost).HasColumnType("decimal(18,6)");
+            entity.HasIndex(e => e.CreatedAt);
+            entity.HasIndex(e => new { e.Provider, e.TaskType });
         });
     }
 

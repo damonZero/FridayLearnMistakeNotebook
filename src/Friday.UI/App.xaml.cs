@@ -66,6 +66,8 @@ public partial class App : System.Windows.Application
                 "SmartWrongAnswerBook", "Backups");
             return new BackupService(sp.GetRequiredService<AppDbContext>(), backupPath);
         });
+        services.AddScoped<IAiService, AiService>();
+        services.AddScoped<IAiConfigService, AiConfigService>();
 
         // Navigation Service
         services.AddSingleton<NavigationService>();
@@ -80,6 +82,7 @@ public partial class App : System.Windows.Application
         services.AddTransient<AddQuestionViewModel>();
         services.AddTransient<SettingsViewModel>();
         services.AddTransient<ExportImportViewModel>();
+        services.AddTransient<AiConfigViewModel>();
 
         // Main Window
         services.AddSingleton<MainWindow>();

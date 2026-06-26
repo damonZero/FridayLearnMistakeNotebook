@@ -14,6 +14,12 @@
                 <ResourceDictionary Source="Resources/Styles/WindowStyles.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
+            <!-- Converters -->
+            <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+            <local:InverseBoolConverter x:Key="InverseBoolConverter" xmlns:local="clr-namespace:Friday.UI.Converters"/>
+            <local:StringToVisibilityConverter x:Key="StringToVisibility" xmlns:local="clr-namespace:Friday.UI.Converters"/>
+            <local:StringToBrushConverter x:Key="StringToBrushConverter" xmlns:local="clr-namespace:Friday.UI.Converters"/>
+
             <!-- ViewModel -> View DataTemplates -->
             <DataTemplate DataType="{x:Type vm:HomeViewModel}">
                 <views:HomeView />
@@ -38,6 +44,9 @@
             </DataTemplate>
             <DataTemplate DataType="{x:Type vm:ExportImportViewModel}">
                 <views:ExportImportView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:AiConfigViewModel}">
+                <views:AiConfigView />
             </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>

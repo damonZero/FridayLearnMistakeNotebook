@@ -29,4 +29,10 @@ public partial class SettingsViewModel : ObservableObject
     {
         _navigationService.NavigateTo<ExportImportViewModel>("数据管理");
     }
+
+    [RelayCommand]
+    private void NavigateToAiConfig()
+    {
+        _navigationService.NavigateTo<AiConfigViewModel>("AI 配置");
+    }
 }

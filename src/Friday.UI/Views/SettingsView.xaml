@@ -66,18 +66,22 @@
                 </StackPanel>
             </Border>
 
-            <!-- AI Configuration Placeholder -->
+            <!-- AI Configuration -->
             <Border Style="{StaticResource CartoonCard}" Margin="8,8">
                 <StackPanel>
                     <TextBlock Text="AI 配置"
                                Style="{StaticResource SubsectionTitle}" />
-                    <TextBlock Text="AI 功能将在 Phase 4 中开放"
+                    <TextBlock Text="配置 AI 模型，用于 OCR 识别、错题分析和相似题生成"
                                Foreground="{StaticResource TextSecondaryBrush}"
                                Margin="0,0,0,12" />
-                    <TextBlock Text="• OCR 文字识别" Foreground="{StaticResource TextSecondaryBrush}" Margin="4,2" />
-                    <TextBlock Text="• 知识点分析" Foreground="{StaticResource TextSecondaryBrush}" Margin="4,2" />
-                    <TextBlock Text="• 相似题生成" Foreground="{StaticResource TextSecondaryBrush}" Margin="4,2" />
-                    <TextBlock Text="• 每个任务可配置不同的 AI 模型" Foreground="{StaticResource TextSecondaryBrush}" Margin="4,2" />
+                    <TextBlock Text="• 🌋 火山方舟 (Ark) - 视觉识别/OCR" Foreground="{StaticResource TextSecondaryBrush}" Margin="4,2" />
+                    <TextBlock Text="• 🐋 DeepSeek - 错题分析/生成" Foreground="{StaticResource TextSecondaryBrush}" Margin="4,2" />
+                    <TextBlock Text="• 📊 Token 消耗统计和费用预估" Foreground="{StaticResource TextSecondaryBrush}" Margin="4,2" />
+                    <Button Content="打开 AI 配置"
+                            Style="{StaticResource CartoonButton}"
+                            Command="{Binding NavigateToAiConfigCommand}"
+                            HorizontalAlignment="Left"
+                            Margin="0,12,0,0" />
                 </StackPanel>
             </Border>
 
