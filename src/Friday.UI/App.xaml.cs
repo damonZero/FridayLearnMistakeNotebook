@@ -4,6 +4,7 @@ using Friday.Application.Interfaces;
 using Friday.Application.Services;
 using Friday.Infrastructure.Persistence;
 using Friday.Infrastructure.Persistence.Repositories;
+using Friday.Infrastructure.Services;
 using Friday.UI.Services;
 using Friday.UI.ViewModels;
 using Microsoft.EntityFrameworkCore;
@@ -56,6 +57,16 @@ public partial class App : System.Windows.Application
         services.AddScoped<SubjectService>();
         services.AddScoped<KnowledgeTreeService>();
 
+        // Infrastructure Services
+        services.AddScoped<IExportImportService, ExportImportService>();
+        services.AddSingleton<IBackupService>(sp =>
+        {
+            var backupPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "SmartWrongAnswerBook", "Backups");
+            return new BackupService(sp.GetRequiredService<AppDbContext>(), backupPath);
+        });
+
         // Navigation Service
         services.AddSingleton<NavigationService>();
 
@@ -68,6 +79,7 @@ public partial class App : System.Windows.Application
         services.AddTransient<QuestionListViewModel>();
         services.AddTransient<AddQuestionViewModel>();
         services.AddTransient<SettingsViewModel>();
+        services.AddTransient<ExportImportViewModel>();
 
         // Main Window
         services.AddSingleton<MainWindow>();
@@ -84,12 +96,32 @@ public partial class App : System.Windows.Application
         context.ConfigureSqlite();
         await SubjectRepository.SeedPresetSubjectsAsync(context);
 
+        // Ensure backup directory exists
+        var backupPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "SmartWrongAnswerBook", "Backups");
+        if (!Directory.Exists(backupPath))
+            Directory.CreateDirectory(backupPath);
+
         var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
         mainWindow.Show();
     }
 
-    protected override void OnExit(ExitEventArgs e)
+    protected override async void OnExit(ExitEventArgs e)
     {
+        // Auto-backup on app close per D-15
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var backupService = scope.ServiceProvider.GetRequiredService<IBackupService>();
+            await backupService.BackupAsync();
+            await backupService.CleanupOldBackupsAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to create backup on app exit");
+        }
+
         Log.CloseAndFlush();
         base.OnExit(e);
     }

@@ -51,8 +51,23 @@
                 </StackPanel>
             </Border>
 
-            <!-- AI Configuration Placeholder -->
+            <!-- Data Management Section -->
             <Border Style="{StaticResource CartoonCard}" Margin="8,16,8,8">
+                <StackPanel>
+                    <TextBlock Text="数据管理"
+                               Style="{StaticResource SubsectionTitle}" />
+                    <TextBlock Text="导出/导入数据，管理备份文件"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Margin="0,0,0,12" />
+                    <Button Content="打开数据管理"
+                            Style="{StaticResource CartoonButton}"
+                            Command="{Binding NavigateToExportImportCommand}"
+                            HorizontalAlignment="Left" />
+                </StackPanel>
+            </Border>
+
+            <!-- AI Configuration Placeholder -->
+            <Border Style="{StaticResource CartoonCard}" Margin="8,8">
                 <StackPanel>
                     <TextBlock Text="AI 配置"
                                Style="{StaticResource SubsectionTitle}" />
@@ -63,16 +78,6 @@
                     <TextBlock Text="• 知识点分析" Foreground="{StaticResource TextSecondaryBrush}" Margin="4,2" />
                     <TextBlock Text="• 相似题生成" Foreground="{StaticResource TextSecondaryBrush}" Margin="4,2" />
                     <TextBlock Text="• 每个任务可配置不同的 AI 模型" Foreground="{StaticResource TextSecondaryBrush}" Margin="4,2" />
-                </StackPanel>
-            </Border>
-
-            <!-- Data Management Placeholder -->
-            <Border Style="{StaticResource CartoonCard}" Margin="8,8">
-                <StackPanel>
-                    <TextBlock Text="数据管理"
-                               Style="{StaticResource SubsectionTitle}" />
-                    <TextBlock Text="数据导出/导入功能将在本计划中实现"
-                               Foreground="{StaticResource TextSecondaryBrush}" />
                 </StackPanel>
             </Border>
 

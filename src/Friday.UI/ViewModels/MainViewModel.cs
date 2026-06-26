@@ -61,4 +61,10 @@ public partial class MainViewModel : ObservableObject
         _navigationService.NavigateTo<SettingsViewModel>("设置");
         SelectedNavigationIndex = 4;
     }
+
+    public void NavigateToExportImport()
+    {
+        _navigationService.NavigateTo<ExportImportViewModel>("数据管理");
+        SelectedNavigationIndex = 4; // Keep settings highlighted
+    }
 }

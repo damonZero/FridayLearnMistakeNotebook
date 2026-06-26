@@ -37,6 +37,9 @@
             <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
                 <views:SettingsView />
             </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:ExportImportViewModel}">
+                <views:ExportImportView />
+            </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
