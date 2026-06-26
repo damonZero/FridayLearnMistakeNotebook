@@ -57,10 +57,10 @@
 ### Data Management (数据管理)
 
 - [ ] **DATA-01**: All data stored locally in SQLite database
-- [ ] **DATA-02**: System auto-backups data to local file on schedule
-- [ ] **DATA-03**: User can export data to JSON format for backup
-- [ ] **DATA-04**: User can export data to CSV format for external analysis
-- [ ] **DATA-05**: User can import data from JSON backup file
+- [x] **DATA-02**: System auto-backups data to local file on schedule
+- [x] **DATA-03**: User can export data to JSON format for backup
+- [x] **DATA-04**: User can export data to CSV format for external analysis
+- [x] **DATA-05**: User can import data from JSON backup file
 - [ ] **DATA-06**: System sends Windows notification for daily review reminders
 - [ ] **DATA-07**: User can configure review reminder time
 - [ ] **DATA-08**: User can generate printable review sheet from due questions as PDF
@@ -78,11 +78,11 @@
 
 ### User Interface (用户界面)
 
-- [ ] **UI-01**: Application uses cute cartoon style suitable for elementary students (ages 6-12)
-- [ ] **UI-02**: Application provides parent management mode with clean interface
+- [x] **UI-01**: Application uses cute cartoon style suitable for elementary students (ages 6-12)
+- [x] **UI-02**: Application provides parent management mode with clean interface
 - [ ] **UI-03**: Application provides child review mode with playful interface
 - [ ] **UI-04**: UI elements use large buttons and simple language appropriate for children
-- [ ] **UI-05**: Application supports Chinese language interface
+- [x] **UI-05**: Application supports Chinese language interface
 
 ## v2 Requirements
 
@@ -144,10 +144,10 @@
 | AICFG-03 | Phase 4 | Pending |
 | AICFG-04 | Phase 4 | Pending |
 | DATA-01 | Phase 1 | Pending |
-| DATA-02 | Phase 1 | Pending |
-| DATA-03 | Phase 1 | Pending |
-| DATA-04 | Phase 1 | Pending |
-| DATA-05 | Phase 1 | Pending |
+| DATA-02 | Phase 1 | Done |
+| DATA-03 | Phase 1 | Done |
+| DATA-04 | Phase 1 | Done |
+| DATA-05 | Phase 1 | Done |
 | DATA-06 | Phase 5 | Pending |
 | DATA-07 | Phase 5 | Pending |
 | DATA-08 | Phase 5 | Pending |
@@ -159,11 +159,11 @@
 | ANA-06 | Phase 5 | Pending |
 | ANA-07 | Phase 5 | Pending |
 | ANA-08 | Phase 5 | Pending |
-| UI-01 | Phase 1 | Pending |
-| UI-02 | Phase 1 | Pending |
+| UI-01 | Phase 1 | Done |
+| UI-02 | Phase 1 | Done |
 | UI-03 | Phase 5 | Pending |
 | UI-04 | Phase 5 | Pending |
-| UI-05 | Phase 1 | Pending |
+| UI-05 | Phase 1 | Done |
 
 **Coverage:**
 - v1 requirements: 55 total (mapped from 8 categories: PHOTO, SUBJ, KNOW, REV, AICFG, DATA, ANA, UI)

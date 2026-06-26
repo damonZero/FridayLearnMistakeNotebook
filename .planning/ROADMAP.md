@@ -47,7 +47,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 01-03: WPF shell & base UI -- Main window with navigation, WPF UI Fluent theme + cartoon overlay, parent mode layout, Chinese strings, data export/import, auto-backup
+- [x] 01-03: WPF shell & base UI -- Main window with navigation, WPF UI Fluent theme + cartoon overlay, parent mode layout, Chinese strings, data export/import, auto-backup (completed 2026-06-26)
 
 ### Phase 2: Capture Pipeline
 
@@ -144,7 +144,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 2/3 | In progress | - |
+| 1. Foundation | 3/3 | Complete | 2026-06-26 |
 | 2. Capture Pipeline | 0/3 | Not started | - |
 | 3. Review Engine | 0/3 | Not started | - |
 | 4. AI Intelligence | 0/3 | Not started | - |
