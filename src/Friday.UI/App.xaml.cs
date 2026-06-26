@@ -1,6 +1,7 @@
 using System.IO;
 using System.Windows;
 using Friday.Application.Interfaces;
+using Friday.Application.Services;
 using Friday.Infrastructure.Persistence;
 using Friday.Infrastructure.Persistence.Repositories;
 using Friday.UI.ViewModels;
@@ -46,6 +47,12 @@ public partial class App : System.Windows.Application
 
         // Repositories
         services.AddScoped<ISubjectRepository, SubjectRepository>();
+        services.AddScoped<IChapterRepository, ChapterRepository>();
+        services.AddScoped<IKnowledgePointRepository, KnowledgePointRepository>();
+
+        // Services
+        services.AddScoped<SubjectService>();
+        services.AddScoped<KnowledgeTreeService>();
 
         // ViewModels
         services.AddTransient<MainViewModel>();
