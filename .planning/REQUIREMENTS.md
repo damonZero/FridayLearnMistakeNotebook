@@ -109,67 +109,75 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PHOTO-01 | — | Pending |
-| PHOTO-02 | — | Pending |
-| PHOTO-03 | — | Pending |
-| PHOTO-04 | — | Pending |
-| PHOTO-05 | — | Pending |
-| PHOTO-06 | — | Pending |
-| PHOTO-07 | — | Pending |
-| PHOTO-08 | — | Pending |
-| PHOTO-09 | — | Pending |
-| SUBJ-01 | — | Pending |
-| SUBJ-02 | — | Pending |
-| SUBJ-03 | — | Pending |
-| SUBJ-04 | — | Pending |
-| SUBJ-05 | — | Pending |
-| SUBJ-06 | — | Pending |
-| SUBJ-07 | — | Pending |
-| KNOW-01 | — | Pending |
-| KNOW-02 | — | Pending |
-| KNOW-03 | — | Pending |
-| KNOW-04 | — | Pending |
-| KNOW-05 | — | Pending |
-| REV-01 | — | Pending |
-| REV-02 | — | Pending |
-| REV-03 | — | Pending |
-| REV-04 | — | Pending |
-| REV-05 | — | Pending |
-| REV-06 | — | Pending |
-| REV-07 | — | Pending |
-| REV-08 | — | Pending |
-| REV-09 | — | Pending |
-| AICFG-01 | — | Pending |
-| AICFG-02 | — | Pending |
-| AICFG-03 | — | Pending |
-| AICFG-04 | — | Pending |
-| DATA-01 | — | Pending |
-| DATA-02 | — | Pending |
-| DATA-03 | — | Pending |
-| DATA-04 | — | Pending |
-| DATA-05 | — | Pending |
-| DATA-06 | — | Pending |
-| DATA-07 | — | Pending |
-| DATA-08 | — | Pending |
-| ANA-01 | — | Pending |
-| ANA-02 | — | Pending |
-| ANA-03 | — | Pending |
-| ANA-04 | — | Pending |
-| ANA-05 | — | Pending |
-| ANA-06 | — | Pending |
-| ANA-07 | — | Pending |
-| ANA-08 | — | Pending |
-| UI-01 | — | Pending |
-| UI-02 | — | Pending |
-| UI-03 | — | Pending |
-| UI-04 | — | Pending |
-| UI-05 | — | Pending |
+| PHOTO-01 | Phase 2 | Pending |
+| PHOTO-02 | Phase 2 | Pending |
+| PHOTO-03 | Phase 2 | Pending |
+| PHOTO-04 | Phase 2 | Pending |
+| PHOTO-05 | Phase 2 | Pending |
+| PHOTO-06 | Phase 2 | Pending |
+| PHOTO-07 | Phase 2 | Pending |
+| PHOTO-08 | Phase 2 | Pending |
+| PHOTO-09 | Phase 2 | Pending |
+| SUBJ-01 | Phase 1 | Pending |
+| SUBJ-02 | Phase 1 | Pending |
+| SUBJ-03 | Phase 1 | Pending |
+| SUBJ-04 | Phase 1 | Pending |
+| SUBJ-05 | Phase 1 | Pending |
+| SUBJ-06 | Phase 1 | Pending |
+| SUBJ-07 | Phase 1 | Pending |
+| KNOW-01 | Phase 4 | Pending |
+| KNOW-02 | Phase 4 | Pending |
+| KNOW-03 | Phase 4 | Pending |
+| KNOW-04 | Phase 4 | Pending |
+| KNOW-05 | Phase 4 | Pending |
+| REV-01 | Phase 3 | Pending |
+| REV-02 | Phase 3 | Pending |
+| REV-03 | Phase 3 | Pending |
+| REV-04 | Phase 3 | Pending |
+| REV-05 | Phase 3 | Pending |
+| REV-06 | Phase 3 | Pending |
+| REV-07 | Phase 3 | Pending |
+| REV-08 | Phase 3 | Pending |
+| REV-09 | Phase 3 | Pending |
+| AICFG-01 | Phase 4 | Pending |
+| AICFG-02 | Phase 4 | Pending |
+| AICFG-03 | Phase 4 | Pending |
+| AICFG-04 | Phase 4 | Pending |
+| DATA-01 | Phase 1 | Pending |
+| DATA-02 | Phase 1 | Pending |
+| DATA-03 | Phase 1 | Pending |
+| DATA-04 | Phase 1 | Pending |
+| DATA-05 | Phase 1 | Pending |
+| DATA-06 | Phase 5 | Pending |
+| DATA-07 | Phase 5 | Pending |
+| DATA-08 | Phase 5 | Pending |
+| ANA-01 | Phase 5 | Pending |
+| ANA-02 | Phase 5 | Pending |
+| ANA-03 | Phase 5 | Pending |
+| ANA-04 | Phase 5 | Pending |
+| ANA-05 | Phase 5 | Pending |
+| ANA-06 | Phase 5 | Pending |
+| ANA-07 | Phase 5 | Pending |
+| ANA-08 | Phase 5 | Pending |
+| UI-01 | Phase 1 | Pending |
+| UI-02 | Phase 1 | Pending |
+| UI-03 | Phase 5 | Pending |
+| UI-04 | Phase 5 | Pending |
+| UI-05 | Phase 1 | Pending |
 
 **Coverage:**
-- v1 requirements: 53 total
-- Mapped to phases: 0
-- Unmapped: 53 ⚠️ (will be resolved during roadmap creation)
+- v1 requirements: 55 total (mapped from 8 categories: PHOTO, SUBJ, KNOW, REV, AICFG, DATA, ANA, UI)
+- Mapped to phases: 55
+- Unmapped: 0
+
+| Phase | Requirements | Count |
+|-------|-------------|-------|
+| Phase 1: Foundation | DATA-01..05, SUBJ-01..07, UI-01, UI-02, UI-05 | 15 |
+| Phase 2: Capture Pipeline | PHOTO-01..09 | 9 |
+| Phase 3: Review Engine | REV-01..09 | 9 |
+| Phase 4: AI Intelligence | KNOW-01..05, AICFG-01..04 | 9 |
+| Phase 5: Polish & Engagement | ANA-01..08, DATA-06..08, UI-03, UI-04 | 13 |
 
 ---
 *Requirements defined: 2026-06-26*
-*Last updated: 2026-06-26 after initial definition*
+*Last updated: 2026-06-26 after roadmap creation*
