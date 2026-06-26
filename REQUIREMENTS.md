@@ -7,10 +7,71 @@
 
 ---
 
+## 0. 技术规范（强制）
+
+### 0.1 平台要求
+- **目标平台：** Android
+- **输出物：** APK 安装包
+- **最低版本：** Android 8.0 (API 26)
+- **目标版本：** Android 14 (API 34)
+
+### 0.2 开发标准
+**必须使用 Android 原生开发技术栈：**
+
+| 项目 | 标准 |
+|------|------|
+| **开发语言** | Kotlin |
+| **UI 框架** | Jetpack Compose |
+| **架构模式** | MVVM + Clean Architecture |
+| **数据库** | Room (SQLite) |
+| **依赖注入** | Hilt |
+| **异步处理** | Kotlin Coroutines + Flow |
+| **构建工具** | Gradle (Kotlin DSL) |
+| **最低 SDK** | API 26 (Android 8.0) |
+| **目标 SDK** | API 34 (Android 14) |
+
+### 0.3 项目结构
+```
+app/
+├── src/main/
+│   ├── java/com/friday/learnmistake/
+│   │   ├── data/           # 数据层
+│   │   │   ├── local/      # 本地数据库 (Room)
+│   │   │   ├── remote/     # 网络请求 (Retrofit)
+│   │   │   └── repository/ # 仓库实现
+│   │   ├── domain/         # 领域层
+│   │   │   ├── model/      # 数据模型
+│   │   │   ├── repository/ # 仓库接口
+│   │   │   └── usecase/    # 用例
+│   │   ├── presentation/   # 表现层
+│   │   │   ├── ui/         # Compose UI
+│   │   │   └── viewmodel/  # ViewModel
+│   │   └── di/             # 依赖注入 (Hilt)
+│   └── res/                # 资源文件
+└── build.gradle.kts        # 构建配置
+```
+
+### 0.4 必须使用的库
+| 类别 | 库 | 用途 |
+|------|-----|------|
+| UI | Jetpack Compose | 声明式 UI |
+| UI | Material 3 | Material Design 组件 |
+| 导航 | Navigation Compose | 页面导航 |
+| 数据库 | Room | 本地 SQLite |
+| 网络 | Retrofit + OkHttp | API 请求 |
+| 序列化 | Kotlinx Serialization | JSON 解析 |
+| 依赖注入 | Hilt | 依赖注入 |
+| 图片 | Coil | 图片加载 |
+| 相机 | CameraX | 摄像头调用 |
+| 权限 | Accompanist | 运行时权限 |
+| 异步 | Coroutines + Flow | 异步处理 |
+
+---
+
 ## 1. 产品概述
 
 ### 1.1 产品定位
-面向小学生的智能错题本 Android APP，通过拍照识别、AI 分析、科学复习三大核心能力，帮助家长和孩子高效管理错题，提升学习效果。
+面向小学生的智能错题本 Android APP（APK），通过拍照识别、AI 分析、科学复习三大核心能力，帮助家长和孩子高效管理错题，提升学习效果。
 
 ### 1.2 目标用户
 - **主要用户：** 家长（录入、管理错题）
@@ -152,184 +213,293 @@
 
 | 层级 | 技术 | 说明 |
 |------|------|------|
-| **移动端** | .NET MAUI (Android) | 跨平台框架，C# 开发 |
-| **UI 框架** | MAUI XAML | 原生 Android UI |
-| **MVVM** | CommunityToolkit.Mvvm | 简化 MVVM 开发 |
-| **数据库** | EF Core + SQLite | 本地数据存储 |
-| **AI 集成** | HttpClient + API | 火山方舟、DeepSeek |
-| **日志** | Serilog | 文件日志 |
-| **测试** | xUnit | 单元测试 |
+| **开发语言** | Kotlin | Android 官方推荐语言 |
+| **UI 框架** | Jetpack Compose | 声明式 UI |
+| **UI 组件** | Material 3 | Material Design 3 |
+| **架构模式** | MVVM + Clean Architecture | 分层架构 |
+| **数据库** | Room (SQLite) | 本地数据存储 |
+| **网络请求** | Retrofit + OkHttp | API 调用 |
+| **依赖注入** | Hilt | 依赖注入框架 |
+| **异步处理** | Coroutines + Flow | 异步编程 |
+| **图片加载** | Coil | 图片加载库 |
+| **摄像头** | CameraX | 相机调用 |
+| **权限管理** | Accompanist Permissions | 运行时权限 |
+| **序列化** | Kotlinx Serialization | JSON 解析 |
+| **构建工具** | Gradle (Kotlin DSL) | 项目构建 |
+| **测试** | JUnit + Espresso | 单元测试 + UI 测试 |
 
 ### 4.2 项目结构
 
 ```
-Friday/
-├── Friday.Domain/           # 领域层（实体、枚举、业务规则）
-│   ├── Entities/
-│   │   ├── Subject.cs
-│   │   ├── Chapter.cs
-│   │   ├── KnowledgePoint.cs
-│   │   ├── Question.cs
-│   │   ├── AiConfig.cs
-│   │   └── AiUsageLog.cs
-│   └── Enums/
-│       └── ErrorType.cs
+app/
+├── src/
+│   ├── main/
+│   │   ├── java/com/friday/learnmistake/
+│   │   │   ├── App.kt                          # Application 类
+│   │   │   ├── MainActivity.kt                  # 主 Activity
+│   │   │   │
+│   │   │   ├── data/                            # 数据层
+│   │   │   │   ├── local/
+│   │   │   │   │   ├── AppDatabase.kt           # Room 数据库
+│   │   │   │   │   ├── dao/                     # 数据访问对象
+│   │   │   │   │   │   ├── SubjectDao.kt
+│   │   │   │   │   │   ├── ChapterDao.kt
+│   │   │   │   │   │   ├── KnowledgePointDao.kt
+│   │   │   │   │   │   ├── QuestionDao.kt
+│   │   │   │   │   │   ├── AiConfigDao.kt
+│   │   │   │   │   │   └── AiUsageLogDao.kt
+│   │   │   │   │   └── entity/                  # Room 实体
+│   │   │   │   │       ├── SubjectEntity.kt
+│   │   │   │   │       ├── ChapterEntity.kt
+│   │   │   │   │       ├── KnowledgePointEntity.kt
+│   │   │   │   │       ├── QuestionEntity.kt
+│   │   │   │   │       ├── AiConfigEntity.kt
+│   │   │   │   │       └── AiUsageLogEntity.kt
+│   │   │   │   ├── remote/                      # 网络请求
+│   │   │   │   │   ├── api/
+│   │   │   │   │   │   ├── VolcanoArkApi.kt     # 火山方舟 API
+│   │   │   │   │   │   └── DeepSeekApi.kt       # DeepSeek API
+│   │   │   │   │   └── dto/                     # 数据传输对象
+│   │   │   │   └── repository/                  # 仓库实现
+│   │   │   │       ├── SubjectRepositoryImpl.kt
+│   │   │   │       ├── QuestionRepositoryImpl.kt
+│   │   │   │       ├── AiRepositoryImpl.kt
+│   │   │   │       └── BackupRepositoryImpl.kt
+│   │   │   │
+│   │   │   ├── domain/                          # 领域层
+│   │   │   │   ├── model/                       # 领域模型
+│   │   │   │   │   ├── Subject.kt
+│   │   │   │   │   ├── Chapter.kt
+│   │   │   │   │   ├── KnowledgePoint.kt
+│   │   │   │   │   ├── Question.kt
+│   │   │   │   │   ├── ErrorType.kt
+│   │   │   │   │   └── ReviewSchedule.kt
+│   │   │   │   ├── repository/                  # 仓库接口
+│   │   │   │   │   ├── SubjectRepository.kt
+│   │   │   │   │   ├── QuestionRepository.kt
+│   │   │   │   │   └── AiRepository.kt
+│   │   │   │   └── usecase/                     # 用例
+│   │   │   │       ├── subject/
+│   │   │   │       │   ├── GetSubjectsUseCase.kt
+│   │   │   │       │   ├── AddSubjectUseCase.kt
+│   │   │   │       │   └── DeleteSubjectUseCase.kt
+│   │   │   │       ├── question/
+│   │   │   │       │   ├── AddQuestionUseCase.kt
+│   │   │   │       │   ├── GetQuestionsUseCase.kt
+│   │   │   │       │   └── UpdateQuestionUseCase.kt
+│   │   │   │       ├── review/
+│   │   │   │       │   ├── GetReviewQuestionsUseCase.kt
+│   │   │   │       │   ├── MarkReviewResultUseCase.kt
+│   │   │   │       │   └── CalculateNextReviewUseCase.kt
+│   │   │   │       └── ai/
+│   │   │   │           ├── RecognizeImageUseCase.kt
+│   │   │   │           ├── AnalyzeQuestionUseCase.kt
+│   │   │   │           └── GenerateSimilarUseCase.kt
+│   │   │   │
+│   │   │   ├── presentation/                    # 表现层
+│   │   │   │   ├── navigation/                  # 导航
+│   │   │   │   │   └── AppNavigation.kt
+│   │   │   │   ├── screen/                      # 页面
+│   │   │   │   │   ├── home/
+│   │   │   │   │   │   ├── HomeScreen.kt
+│   │   │   │   │   │   └── HomeViewModel.kt
+│   │   │   │   │   ├── subject/
+│   │   │   │   │   │   ├── SubjectListScreen.kt
+│   │   │   │   │   │   ├── SubjectListViewModel.kt
+│   │   │   │   │   │   ├── AddSubjectDialog.kt
+│   │   │   │   │   │   └── SubjectDetailScreen.kt
+│   │   │   │   │   ├── question/
+│   │   │   │   │   │   ├── QuestionListScreen.kt
+│   │   │   │   │   │   ├── QuestionListViewModel.kt
+│   │   │   │   │   │   ├── AddQuestionScreen.kt
+│   │   │   │   │   │   └── AddQuestionViewModel.kt
+│   │   │   │   │   ├── review/
+│   │   │   │   │   │   ├── ReviewScreen.kt
+│   │   │   │   │   │   ├── ReviewViewModel.kt
+│   │   │   │   │   │   └── ReviewResultScreen.kt
+│   │   │   │   │   ├── camera/
+│   │   │   │   │   │   ├── CameraScreen.kt
+│   │   │   │   │   │   ├── CameraViewModel.kt
+│   │   │   │   │   │   └── ImageCropScreen.kt
+│   │   │   │   │   ├── settings/
+│   │   │   │   │   │   ├── SettingsScreen.kt
+│   │   │   │   │   │   ├── SettingsViewModel.kt
+│   │   │   │   │   │   ├── AiConfigScreen.kt
+│   │   │   │   │   │   └── AiConfigViewModel.kt
+│   │   │   │   │   └── statistics/
+│   │   │   │   │       ├── StatisticsScreen.kt
+│   │   │   │   │       └── StatisticsViewModel.kt
+│   │   │   │   ├── component/                   # 通用组件
+│   │   │   │   │   ├── SubjectCard.kt
+│   │   │   │   │   ├── QuestionCard.kt
+│   │   │   │   │   ├── ReviewCard.kt
+│   │   │   │   │   ├── StatCard.kt
+│   │   │   │   │   └── LoadingIndicator.kt
+│   │   │   │   └── theme/                       # 主题
+│   │   │   │       ├── Theme.kt
+│   │   │   │       ├── Color.kt
+│   │   │   │       └── Type.kt
+│   │   │   │
+│   │   │   └── di/                              # 依赖注入
+│   │   │       ├── AppModule.kt
+│   │   │       ├── DatabaseModule.kt
+│   │   │       ├── NetworkModule.kt
+│   │   │       └── RepositoryModule.kt
+│   │   │
+│   │   ├── res/                                 # 资源文件
+│   │   │   ├── values/
+│   │   │   │   ├── strings.xml                  # 字符串资源
+│   │   │   │   ├── colors.xml                   # 颜色资源
+│   │   │   │   └── themes.xml                   # 主题资源
+│   │   │   ├── drawable/                        # 图片资源
+│   │   │   └── mipmap/                          # 应用图标
+│   │   │
+│   │   └── AndroidManifest.xml                  # 清单文件
+│   │
+│   └── test/                                    # 单元测试
+│       └── java/com/friday/learnmistake/
+│           ├── domain/usecase/
+│           └── data/repository/
 │
-├── Friday.Application/      # 应用层（接口、服务、业务逻辑）
-│   ├── Interfaces/
-│   │   ├── ISubjectRepository.cs
-│   │   ├── IChapterRepository.cs
-│   │   ├── IKnowledgePointRepository.cs
-│   │   ├── IQuestionRepository.cs
-│   │   ├── IAiService.cs
-│   │   ├── IAiConfigService.cs
-│   │   ├── IExportImportService.cs
-│   │   └── IBackupService.cs
-│   └── Services/
-│       ├── SubjectService.cs
-│       └── KnowledgeTreeService.cs
-│
-├── Friday.Infrastructure/   # 基础设施层（数据库、外部服务）
-│   ├── Persistence/
-│   │   ├── AppDbContext.cs
-│   │   └── Repositories/
-│   └── Services/
-│       ├── AiService.cs
-│       ├── AiConfigService.cs
-│       ├── ExportImportService.cs
-│       └── BackupService.cs
-│
-├── Friday.Mobile/           # MAUI Android 应用
-│   ├── Pages/
-│   ├── ViewModels/
-│   ├── Services/
-│   ├── Converters/
-│   └── Platforms/Android/
-│
-└── Friday.Tests/            # 单元测试
+├── build.gradle.kts                             # 项目构建文件
+└── app/build.gradle.kts                         # 模块构建文件
 ```
 
 ### 4.3 数据模型
 
 #### Subject（科目）
-```csharp
-public class Subject
-{
-    public Guid Id { get; set; }
-    public string Name { get; set; }           // 科目名称
-    public string? Icon { get; set; }           // 图标
-    public string? Color { get; set; }          // 颜色
-    public int SortOrder { get; set; }          // 排序
-    public bool IsPreset { get; set; }          // 是否预设
-    public DateTime CreatedAt { get; set; }
-    public DateTime UpdatedAt { get; set; }
-    public List<Chapter> Chapters { get; set; }
-}
+```kotlin
+@Entity(tableName = "subjects")
+data class SubjectEntity(
+    @PrimaryKey val id: String,           // UUID
+    val name: String,                     // 科目名称
+    val icon: String?,                    // 图标
+    val color: String?,                   // 颜色
+    val sortOrder: Int = 0,              // 排序
+    val isPreset: Boolean = false,       // 是否预设
+    val createdAt: Long,                 // 创建时间
+    val updatedAt: Long                  // 更新时间
+)
 ```
 
 #### Chapter（章节）
-```csharp
-public class Chapter
-{
-    public Guid Id { get; set; }
-    public Guid SubjectId { get; set; }
-    public string Name { get; set; }
-    public int SortOrder { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public DateTime UpdatedAt { get; set; }
-    public Subject Subject { get; set; }
-    public List<KnowledgePoint> KnowledgePoints { get; set; }
-}
+```kotlin
+@Entity(
+    tableName = "chapters",
+    foreignKeys = [ForeignKey(
+        entity = SubjectEntity::class,
+        parentColumns = ["id"],
+        childColumns = ["subjectId"],
+        onDelete = ForeignKey.CASCADE
+    )]
+)
+data class ChapterEntity(
+    @PrimaryKey val id: String,
+    val subjectId: String,
+    val name: String,
+    val sortOrder: Int = 0,
+    val createdAt: Long,
+    val updatedAt: Long
+)
 ```
 
 #### KnowledgePoint（知识点）
-```csharp
-public class KnowledgePoint
-{
-    public Guid Id { get; set; }
-    public Guid ChapterId { get; set; }
-    public string Name { get; set; }
-    public string? Description { get; set; }
-    public int SortOrder { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public DateTime UpdatedAt { get; set; }
-    public Chapter Chapter { get; set; }
-    public List<Question> Questions { get; set; }
-}
+```kotlin
+@Entity(
+    tableName = "knowledge_points",
+    foreignKeys = [ForeignKey(
+        entity = ChapterEntity::class,
+        parentColumns = ["id"],
+        childColumns = ["chapterId"],
+        onDelete = ForeignKey.CASCADE
+    )]
+)
+data class KnowledgePointEntity(
+    @PrimaryKey val id: String,
+    val chapterId: String,
+    val name: String,
+    val description: String?,
+    val sortOrder: Int = 0,
+    val createdAt: Long,
+    val updatedAt: Long
+)
 ```
 
 #### Question（错题）
-```csharp
-public class Question
-{
-    public Guid Id { get; set; }
-    public Guid? SubjectId { get; set; }
-    public Guid? ChapterId { get; set; }
-    public Guid? KnowledgePointId { get; set; }
-    public string Content { get; set; }          // 题目内容
-    public string? Answer { get; set; }           // 正确答案
-    public string? UserAnswer { get; set; }       // 用户答案
-    public ErrorType ErrorType { get; set; }      // 错误类型
-    public string? ImagePath { get; set; }        // 图片路径
-    public string? Notes { get; set; }            // 备注
-    public DateTime? ReviewDate { get; set; }     // 下次复习时间
-    public int LeitnerBox { get; set; }           // 莱特纳盒子 (1-5)
-    public double EaseFactor { get; set; }        // 难度系数
-    public int IntervalDays { get; set; }         // 复习间隔天数
-    public int Streak { get; set; }               // 连续答对次数
-    public DateTime CreatedAt { get; set; }
-    public DateTime UpdatedAt { get; set; }
-    public Subject? Subject { get; set; }
-    public Chapter? Chapter { get; set; }
-    public KnowledgePoint? KnowledgePoint { get; set; }
-}
+```kotlin
+@Entity(
+    tableName = "questions",
+    foreignKeys = [
+        ForeignKey(entity = SubjectEntity::class, parentColumns = ["id"], childColumns = ["subjectId"], onDelete = ForeignKey.SET_NULL),
+        ForeignKey(entity = ChapterEntity::class, parentColumns = ["id"], childColumns = ["chapterId"], onDelete = ForeignKey.SET_NULL),
+        ForeignKey(entity = KnowledgePointEntity::class, parentColumns = ["id"], childColumns = ["knowledgePointId"], onDelete = ForeignKey.SET_NULL)
+    ]
+)
+data class QuestionEntity(
+    @PrimaryKey val id: String,
+    val subjectId: String?,
+    val chapterId: String?,
+    val knowledgePointId: String?,
+    val content: String,                 // 题目内容
+    val answer: String?,                 // 正确答案
+    val userAnswer: String?,             // 用户答案
+    val errorType: String = "UNKNOWN",   // 错误类型
+    val imagePath: String?,              // 图片路径
+    val notes: String?,                  // 备注
+    val reviewDate: Long?,               // 下次复习时间
+    val leitnerBox: Int = 1,            // 莱特纳盒子 (1-5)
+    val easeFactor: Double = 2.5,       // 难度系数
+    val intervalDays: Int = 1,          // 复习间隔天数
+    val streak: Int = 0,                // 连续答对次数
+    val createdAt: Long,
+    val updatedAt: Long
+)
 ```
 
 #### ErrorType（错误类型枚举）
-```csharp
-public enum ErrorType
-{
-    Unknown = 0,      // 未知
-    Careless = 1,     // 粗心
-    Conceptual = 2,   // 概念错误
-    Method = 3,       // 方法错误
-    Calculation = 4   // 计算错误
+```kotlin
+enum class ErrorType {
+    UNKNOWN,        // 未知
+    CARELESS,       // 粗心
+    CONCEPTUAL,     // 概念错误
+    METHOD,         // 方法错误
+    CALCULATION     // 计算错误
 }
 ```
 
 #### AiConfig（AI 配置）
-```csharp
-public class AiConfig
-{
-    public Guid Id { get; set; }
-    public string Provider { get; set; }         // 提供商: volcano_ark, deepseek, openai, claude
-    public string ApiKey { get; set; }           // API Key
-    public string? BaseUrl { get; set; }         // 自定义 Base URL
-    public string? ModelName { get; set; }       // 模型名称
-    public string TaskType { get; set; }         // 任务类型: ocr, analysis, generation
-    public bool IsEnabled { get; set; }          // 是否启用
-    public DateTime CreatedAt { get; set; }
-    public DateTime UpdatedAt { get; set; }
-}
+```kotlin
+@Entity(tableName = "ai_configs")
+data class AiConfigEntity(
+    @PrimaryKey val id: String,
+    val provider: String,                // 提供商: volcano_ark, deepseek, openai, claude
+    val apiKey: String,                  // API Key
+    val baseUrl: String?,                // 自定义 Base URL
+    val modelName: String?,              // 模型名称
+    val taskType: String,                // 任务类型: ocr, analysis, generation
+    val isEnabled: Boolean = true,       // 是否启用
+    val createdAt: Long,
+    val updatedAt: Long
+)
 ```
 
 #### AiUsageLog（AI 使用日志）
-```csharp
-public class AiUsageLog
-{
-    public Guid Id { get; set; }
-    public string Provider { get; set; }
-    public string TaskType { get; set; }
-    public string ModelName { get; set; }
-    public int InputTokens { get; set; }
-    public int OutputTokens { get; set; }
-    public int TotalTokens { get; set; }
-    public decimal EstimatedCost { get; set; }   // 预估费用（人民币）
-    public string? RequestId { get; set; }
-    public bool IsSuccess { get; set; }
-    public string? ErrorMessage { get; set; }
-    public DateTime CreatedAt { get; set; }
-}
+```kotlin
+@Entity(tableName = "ai_usage_logs")
+data class AiUsageLogEntity(
+    @PrimaryKey val id: String,
+    val provider: String,
+    val taskType: String,
+    val modelName: String,
+    val inputTokens: Int,
+    val outputTokens: Int,
+    val totalTokens: Int,
+    val estimatedCost: Double,           // 预估费用（人民币）
+    val requestId: String?,
+    val isSuccess: Boolean,
+    val errorMessage: String?,
+    val createdAt: Long
+)
 ```
 
 ---
