@@ -43,7 +43,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 01-02: Subject, knowledge & question management -- Subject CRUD with presets, hierarchical knowledge tree, Add Question form (exercises Question entity, ErrorType, LeitnerBox), search/filter/sort
+- [x] 01-02: Subject, knowledge & question management -- Subject CRUD with presets, hierarchical knowledge tree, Add Question form (exercises Question entity, ErrorType, LeitnerBox), search/filter/sort (completed 2026-06-26)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -144,7 +144,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 1/3 | In progress | - |
+| 1. Foundation | 2/3 | In progress | - |
 | 2. Capture Pipeline | 0/3 | Not started | - |
 | 3. Review Engine | 0/3 | Not started | - |
 | 4. AI Intelligence | 0/3 | Not started | - |

@@ -19,13 +19,13 @@
 
 ### Subject & Question Management (科目与题目管理)
 
-- [ ] **SUBJ-01**: System presets Chinese, Math, and English as default subjects
-- [ ] **SUBJ-02**: User can add custom subjects dynamically
-- [ ] **SUBJ-03**: User can delete subjects (with confirmation)
-- [ ] **SUBJ-04**: System supports hierarchical knowledge tree: Subject > Chapter > Knowledge Point
-- [ ] **SUBJ-05**: User can browse wrong answer list filtered by subject
-- [ ] **SUBJ-06**: User can search wrong answers by date range, knowledge point, and error type
-- [ ] **SUBJ-07**: User can sort wrong answers by date, review count, and mastery level
+- [x] **SUBJ-01**: System presets Chinese, Math, and English as default subjects
+- [x] **SUBJ-02**: User can add custom subjects dynamically
+- [x] **SUBJ-03**: User can delete subjects (with confirmation)
+- [x] **SUBJ-04**: System supports hierarchical knowledge tree: Subject > Chapter > Knowledge Point
+- [x] **SUBJ-05**: User can browse wrong answer list filtered by subject
+- [x] **SUBJ-06**: User can search wrong answers by date range, knowledge point, and error type
+- [x] **SUBJ-07**: User can sort wrong answers by date, review count, and mastery level
 
 ### Knowledge Analysis (知识点分析)
 
@@ -118,13 +118,13 @@
 | PHOTO-07 | Phase 2 | Pending |
 | PHOTO-08 | Phase 2 | Pending |
 | PHOTO-09 | Phase 2 | Pending |
-| SUBJ-01 | Phase 1 | Pending |
-| SUBJ-02 | Phase 1 | Pending |
-| SUBJ-03 | Phase 1 | Pending |
-| SUBJ-04 | Phase 1 | Pending |
-| SUBJ-05 | Phase 1 | Pending |
-| SUBJ-06 | Phase 1 | Pending |
-| SUBJ-07 | Phase 1 | Pending |
+| SUBJ-01 | Phase 1 | Completed (01-02) |
+| SUBJ-02 | Phase 1 | Completed (01-02) |
+| SUBJ-03 | Phase 1 | Completed (01-02) |
+| SUBJ-04 | Phase 1 | Completed (01-02) |
+| SUBJ-05 | Phase 1 | Completed (01-02) |
+| SUBJ-06 | Phase 1 | Completed (01-02) |
+| SUBJ-07 | Phase 1 | Completed (01-02) |
 | KNOW-01 | Phase 4 | Pending |
 | KNOW-02 | Phase 4 | Pending |
 | KNOW-03 | Phase 4 | Pending |
