@@ -1,0 +1,16 @@
+G:\Friday\src\Friday.Application\bin\Debug\net10.0\Friday.Application.deps.json
+G:\Friday\src\Friday.Application\bin\Debug\net10.0\Friday.Application.dll
+G:\Friday\src\Friday.Application\bin\Debug\net10.0\Friday.Application.pdb
+G:\Friday\src\Friday.Application\bin\Debug\net10.0\Friday.Domain.dll
+G:\Friday\src\Friday.Application\bin\Debug\net10.0\Friday.Domain.pdb
+G:\Friday\src\Friday.Application\obj\Debug\net10.0\Friday.Application.csproj.AssemblyReference.cache
+G:\Friday\src\Friday.Application\obj\Debug\net10.0\Friday.Application.GeneratedMSBuildEditorConfig.editorconfig
+G:\Friday\src\Friday.Application\obj\Debug\net10.0\Friday.Application.AssemblyInfoInputs.cache
+G:\Friday\src\Friday.Application\obj\Debug\net10.0\Friday.Application.AssemblyInfo.cs
+G:\Friday\src\Friday.Application\obj\Debug\net10.0\Friday.Application.csproj.CoreCompileInputs.cache
+G:\Friday\src\Friday.Application\obj\Debug\net10.0\Friday.Application.sourcelink.json
+G:\Friday\src\Friday.Application\obj\Debug\net10.0\Friday.A.1D20B092.Up2Date
+G:\Friday\src\Friday.Application\obj\Debug\net10.0\Friday.Application.dll
+G:\Friday\src\Friday.Application\obj\Debug\net10.0\refint\Friday.Application.dll
+G:\Friday\src\Friday.Application\obj\Debug\net10.0\Friday.Application.pdb
+G:\Friday\src\Friday.Application\obj\Debug\net10.0\ref\Friday.Application.dll
