@@ -19,6 +19,8 @@ import com.friday.mistakenotebook.ui.review.ReviewScreen
 import com.friday.mistakenotebook.ui.settings.SettingsScreen
 import com.friday.mistakenotebook.ui.addquestion.AddQuestionScreen
 import com.friday.mistakenotebook.ui.camera.CameraScreen
+import com.friday.mistakenotebook.ui.questionlist.QuestionListScreen
+import com.friday.mistakenotebook.ui.stats.StatsScreen
 
 data class BottomNavItem(
     val screen: Screen,
@@ -97,6 +99,16 @@ fun FridayNotebookNavHost() {
                             ?.set("ocr_result", text)
                     }
                 )
+            }
+            composable(Screen.QuestionList.route) { backStackEntry ->
+                val subjectId = backStackEntry.arguments?.getString("subjectId")?.toLongOrNull()
+                QuestionListScreen(
+                    navController = navController,
+                    subjectId = if (subjectId == -1L) null else subjectId
+                )
+            }
+            composable(Screen.Stats.route) {
+                StatsScreen(navController = navController)
             }
         }
     }

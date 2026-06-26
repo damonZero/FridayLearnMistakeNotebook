@@ -1,5 +1,6 @@
 package com.friday.mistakenotebook.ui.home
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -83,21 +84,24 @@ fun HomeScreen(
                     title = "待复习",
                     value = uiState.todayReviewCount.toString(),
                     icon = "📝",
-                    color = NeedReviewRed
+                    color = NeedReviewRed,
+                    onClick = { navController.navigate(Screen.Review.route) }
                 )
                 StatCard(
                     modifier = Modifier.weight(1f),
                     title = "错题总数",
                     value = uiState.totalQuestionCount.toString(),
                     icon = "📊",
-                    color = SubjectMath
+                    color = SubjectMath,
+                    onClick = { navController.navigate(Screen.QuestionList.createRoute()) }
                 )
                 StatCard(
                     modifier = Modifier.weight(1f),
                     title = "已掌握",
                     value = uiState.masteredCount.toString(),
                     icon = "✅",
-                    color = MasteredGreen
+                    color = MasteredGreen,
+                    onClick = { navController.navigate(Screen.Stats.route) }
                 )
             }
 
@@ -130,6 +134,30 @@ fun HomeScreen(
                     color = Primary
                 ) {
                     navController.navigate(Screen.AddQuestion.createRoute())
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                ActionButton(
+                    modifier = Modifier.weight(1f),
+                    text = "错题列表",
+                    icon = "📋",
+                    color = SubjectMath
+                ) {
+                    navController.navigate(Screen.QuestionList.createRoute())
+                }
+                ActionButton(
+                    modifier = Modifier.weight(1f),
+                    text = "学习统计",
+                    icon = "📈",
+                    color = SubjectEnglish
+                ) {
+                    navController.navigate(Screen.Stats.route)
                 }
             }
 
@@ -166,10 +194,13 @@ fun StatCard(
     title: String,
     value: String,
     icon: String,
-    color: androidx.compose.ui.graphics.Color
+    color: androidx.compose.ui.graphics.Color,
+    onClick: (() -> Unit)? = null
 ) {
     Card(
-        modifier = modifier,
+        modifier = modifier.then(
+            if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
+        ),
         colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f))
     ) {
         Column(

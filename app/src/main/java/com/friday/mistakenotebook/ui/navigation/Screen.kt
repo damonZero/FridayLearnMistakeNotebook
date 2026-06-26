@@ -37,4 +37,18 @@ sealed class Screen(val route: String) {
 
     // 拍照识别
     object Camera : Screen("camera")
+
+    // 错题列表
+    object QuestionList : Screen("question_list?subjectId={subjectId}") {
+        fun createRoute(subjectId: Long? = null): String {
+            return if (subjectId != null) {
+                "question_list?subjectId=$subjectId"
+            } else {
+                "question_list?subjectId=-1"
+            }
+        }
+    }
+
+    // 学习统计
+    object Stats : Screen("stats")
 }
