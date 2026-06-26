@@ -1,0 +1,106 @@
+<resources>
+    <string name="app_name">周周错题本</string>
+
+    <!-- 通用 -->
+    <string name="ok">确定</string>
+    <string name="cancel">取消</string>
+    <string name="save">保存</string>
+    <string name="delete">删除</string>
+    <string name="edit">编辑</string>
+    <string name="confirm">确认</string>
+    <string name="loading">加载中...</string>
+    <string name="error">出错了</string>
+    <string name="retry">重试</string>
+    <string name="empty">暂无数据</string>
+
+    <!-- 底部导航 -->
+    <string name="nav_home">首页</string>
+    <string name="nav_subjects">科目</string>
+    <string name="nav_review">复习</string>
+    <string name="nav_settings">设置</string>
+
+    <!-- 首页 -->
+    <string name="home_title">今日学习</string>
+    <string name="home_today_review">今日待复习</string>
+    <string name="home_total_questions">错题总数</string>
+    <string name="home_mastered">已掌握</string>
+    <string name="home_streak">连续打卡</string>
+    <string name="home_start_review">开始复习</string>
+    <string name="home_add_question">添加错题</string>
+
+    <!-- 科目 -->
+    <string name="subject_title">科目管理</string>
+    <string name="subject_add">添加科目</string>
+    <string name="subject_chinese">语文</string>
+    <string name="subject_math">数学</string>
+    <string name="subject_english">英语</string>
+    <string name="subject_custom">自定义科目</string>
+    <string name="subject_preset_cannot_delete">预设科目不可删除</string>
+
+    <!-- 错题 -->
+    <string name="question_add">添加错题</string>
+    <string name="question_edit">编辑错题</string>
+    <string name="question_content">题目内容</string>
+    <string name="question_answer">正确答案</string>
+    <string name="question_user_answer">我的答案</string>
+    <string name="question_error_type">错误类型</string>
+    <string name="question_knowledge_point">知识点</string>
+    <string name="question_take_photo">拍照识别</string>
+    <string name="question_manual_input">手动输入</string>
+    <string name="question_ocr_result">识别结果</string>
+    <string name="question_save_success">保存成功</string>
+    <string name="question_delete_confirm">确定删除这道错题吗？</string>
+
+    <!-- 错误类型 -->
+    <string name="error_type_careless">粗心</string>
+    <string name="error_type_conceptual">概念错误</string>
+    <string name="error_type_method">方法错误</string>
+    <string name="error_type_calculation">计算错误</string>
+    <string name="error_type_unknown">未知</string>
+
+    <!-- 复习 -->
+    <string name="review_title">复习</string>
+    <string name="review_today">今日复习</string>
+    <string name="review_all">全部复习</string>
+    <string name="review_mastered">会了</string>
+    <string name="review_not_mastered">还错</string>
+    <string name="review_show_answer">显示答案</string>
+    <string name="review_complete">复习完成！</string>
+    <string name="review_no_questions">暂无待复习题目</string>
+    <string name="review_progress">复习进度</string>
+
+    <!-- 设置 -->
+    <string name="settings_title">设置</string>
+    <string name="settings_ai_config">AI 配置</string>
+    <string name="settings_api_key">API Key</string>
+    <string name="settings_model">模型选择</string>
+    <string name="settings_backup">数据备份</string>
+    <string name="settings_export">导出数据</string>
+    <string name="settings_import">导入数据</string>
+    <string name="settings_about">关于</string>
+    <string name="settings_reminder">复习提醒</string>
+
+    <!-- AI 配置 -->
+    <string name="ai_config_title">AI 配置</string>
+    <string name="ai_config_provider">AI 提供商</string>
+    <string name="ai_config_api_key">API Key</string>
+    <string name="ai_config_base_url">Base URL</string>
+    <string name="ai_config_model">模型名称</string>
+    <string name="ai_config_test_connection">测试连接</string>
+    <string name="ai_config_test_success">连接成功</string>
+    <string name="ai_config_test_failed">连接失败</string>
+
+    <!-- 统计 -->
+    <string name="stats_title">学习统计</string>
+    <string name="stats_total_questions">错题总数</string>
+    <string name="stats_mastered">已掌握</string>
+    <string name="stats_review_today">今日复习</string>
+    <string name="stats_accuracy">正确率</string>
+    <string name="stats_knowledge_map">知识点掌握图</string>
+
+    <!-- 通知 -->
+    <string name="notification_channel_name">复习提醒</string>
+    <string name="notification_channel_description">每日复习提醒通知</string>
+    <string name="notification_title">该复习啦！</string>
+    <string name="notification_content">你有 %d 道错题需要复习</string>
+</resources>
