@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Friday.Mobile.ViewModels"
+             x:Class="Friday.Mobile.Pages.HomePage"
+             Title="{Binding Title}">
+
+    <ContentPage.BindingContext>
+        <vm:HomeViewModel />
+    </ContentPage.BindingContext>
+
+    <ScrollView Padding="20">
+        <VerticalStackLayout Spacing="20">
+            <!-- Greeting -->
+            <Label Text="{Binding Greeting}"
+                   FontSize="24"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center"
+                   TextColor="{StaticResource Primary}" />
+
+            <!-- Stats Cards -->
+            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="15" RowSpacing="15">
+                <!-- Total Subjects -->
+                <Border Grid.Row="0" Grid.Column="0"
+                        BackgroundColor="{StaticResource Primary}"
+                        StrokeShape="RoundRectangle 15"
+                        Padding="20">
+                    <VerticalStackLayout>
+                        <Label Text="📚" FontSize="32" HorizontalOptions="Center" />
+                        <Label Text="{Binding TotalSubjects}"
+                               FontSize="36"
+                               FontAttributes="Bold"
+                               HorizontalOptions="Center"
+                               TextColor="White" />
+                        <Label Text="科目数"
+                               FontSize="14"
+                               HorizontalOptions="Center"
+                               TextColor="White" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Total Questions -->
+                <Border Grid.Row="0" Grid.Column="1"
+                        BackgroundColor="{StaticResource Secondary}"
+                        StrokeShape="RoundRectangle 15"
+                        Padding="20">
+                    <VerticalStackLayout>
+                        <Label Text="📝" FontSize="32" HorizontalOptions="Center" />
+                        <Label Text="{Binding TotalQuestions}"
+                               FontSize="36"
+                               FontAttributes="Bold"
+                               HorizontalOptions="Center"
+                               TextColor="White" />
+                        <Label Text="错题数"
+                               FontSize="14"
+                               HorizontalOptions="Center"
+                               TextColor="White" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Due Reviews -->
+                <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                        BackgroundColor="{StaticResource Accent}"
+                        StrokeShape="RoundRectangle 15"
+                        Padding="20">
+                    <HorizontalStackLayout Spacing="15">
+                        <Label Text="🔄" FontSize="32" VerticalOptions="Center" />
+                        <VerticalStackLayout>
+                            <Label Text="{Binding DueReviews}"
+                                   FontSize="36"
+                                   FontAttributes="Bold"
+                                   TextColor="White" />
+                            <Label Text="待复习题目"
+                                   FontSize="14"
+                                   TextColor="White" />
+                        </VerticalStackLayout>
+                    </HorizontalStackLayout>
+                </Border>
+            </Grid>
+
+            <!-- Quick Actions -->
+            <Label Text="快捷操作"
+                   FontSize="18"
+                   FontAttributes="Bold"
+                   Margin="0,10,0,0" />
+
+            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto" ColumnSpacing="15">
+                <Border Grid.Row="0" Grid.Column="0"
+                        BackgroundColor="White"
+                        StrokeShape="RoundRectangle 15"
+                        Stroke="{StaticResource Primary}"
+                        StrokeThickness="2"
+                        Padding="15">
+                    <VerticalStackLayout>
+                        <Label Text="📷" FontSize="32" HorizontalOptions="Center" />
+                        <Label Text="拍照录入"
+                               FontSize="14"
+                               HorizontalOptions="Center"
+                               TextColor="{StaticResource Primary}" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border Grid.Row="0" Grid.Column="1"
+                        BackgroundColor="White"
+                        StrokeShape="RoundRectangle 15"
+                        Stroke="{StaticResource Primary}"
+                        StrokeThickness="2"
+                        Padding="15">
+                    <VerticalStackLayout>
+                        <Label Text="✍️" FontSize="32" HorizontalOptions="Center" />
+                        <Label Text="手动录入"
+                               FontSize="14"
+                               HorizontalOptions="Center"
+                               TextColor="{StaticResource Primary}" />
+                    </VerticalStackLayout>
+                </Border>
+            </Grid>
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>
