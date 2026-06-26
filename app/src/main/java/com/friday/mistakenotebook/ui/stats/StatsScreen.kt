@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.friday.mistakenotebook.ui.home.StatCard
 import com.friday.mistakenotebook.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -79,7 +80,7 @@ fun StatsScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         LinearProgressIndicator(
-                            progress = { uiState.masteryPercentage / 100f },
+                            progress = uiState.masteryPercentage / 100f,
                             modifier = Modifier.fillMaxWidth(),
                             color = Color.White,
                             trackColor = Color.White.copy(alpha = 0.3f)

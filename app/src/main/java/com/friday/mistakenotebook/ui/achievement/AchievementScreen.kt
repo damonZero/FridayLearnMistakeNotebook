@@ -187,7 +187,7 @@ fun AchievementCard(achievement: Achievement) {
             )
             Spacer(modifier = Modifier.height(8.dp))
             LinearProgressIndicator(
-                progress = { achievement.progress.toFloat() / achievement.target },
+                progress = achievement.progress.toFloat() / achievement.target,
                 modifier = Modifier.fillMaxWidth(),
                 color = if (achievement.isUnlocked)
                     MaterialTheme.colorScheme.primary

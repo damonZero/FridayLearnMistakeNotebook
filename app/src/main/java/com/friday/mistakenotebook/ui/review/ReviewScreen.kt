@@ -80,7 +80,7 @@ fun ReviewContent(
     ) {
         // 进度指示
         LinearProgressIndicator(
-            progress = { (uiState.currentIndex + 1).toFloat() / uiState.questions.size },
+            progress = (uiState.currentIndex + 1).toFloat() / uiState.questions.size,
             modifier = Modifier.fillMaxWidth(),
             color = Secondary
         )

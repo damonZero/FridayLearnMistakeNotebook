@@ -52,9 +52,6 @@ sealed class Screen(val route: String) {
     // 学习统计
     object Stats : Screen("stats")
 
-    // AI 配置
-    object AiConfig : Screen("ai_config")
-
     // AI 使用统计
     object AiUsage : Screen("ai_usage")
 
