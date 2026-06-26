@@ -15,6 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.friday.mistakenotebook.ui.navigation.Screen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,7 +45,13 @@ fun SettingsScreen(
                     icon = Icons.Default.SmartToy,
                     title = "AI 模型配置",
                     subtitle = "配置 OCR、分析、出题的 AI 模型",
-                    onClick = { /* TODO: 导航到 AI 配置页面 */ }
+                    onClick = { navController.navigate(Screen.AiConfig.route) }
+                )
+                SettingsItem(
+                    icon = Icons.Default.Analytics,
+                    title = "AI 使用统计",
+                    subtitle = "查看 Token 消耗和费用",
+                    onClick = { navController.navigate(Screen.AiUsage.route) }
                 )
             }
 

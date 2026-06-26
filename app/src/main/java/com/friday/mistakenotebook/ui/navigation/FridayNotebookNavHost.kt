@@ -21,6 +21,8 @@ import com.friday.mistakenotebook.ui.addquestion.AddQuestionScreen
 import com.friday.mistakenotebook.ui.camera.CameraScreen
 import com.friday.mistakenotebook.ui.questionlist.QuestionListScreen
 import com.friday.mistakenotebook.ui.stats.StatsScreen
+import com.friday.mistakenotebook.ui.aiconfig.AiConfigScreen
+import com.friday.mistakenotebook.ui.aiusage.AiUsageScreen
 
 data class BottomNavItem(
     val screen: Screen,
@@ -109,6 +111,12 @@ fun FridayNotebookNavHost() {
             }
             composable(Screen.Stats.route) {
                 StatsScreen(navController = navController)
+            }
+            composable(Screen.AiConfig.route) {
+                AiConfigScreen(navController = navController)
+            }
+            composable(Screen.AiUsage.route) {
+                AiUsageScreen(navController = navController)
             }
         }
     }
