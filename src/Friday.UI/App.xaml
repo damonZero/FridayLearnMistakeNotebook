@@ -5,20 +5,38 @@
              xmlns:vm="clr-namespace:Friday.UI.ViewModels"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-        <DataTemplate DataType="{x:Type vm:SubjectListViewModel}">
-            <views:SubjectListView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:SubjectManagementViewModel}">
-            <views:SubjectManagementView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:KnowledgeTreeViewModel}">
-            <views:KnowledgeTreeView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:QuestionListViewModel}">
-            <views:QuestionListView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:AddQuestionViewModel}">
-            <views:AddQuestionView />
-        </DataTemplate>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- Cartoon Theme -->
+                <ResourceDictionary Source="Resources/Themes/CartoonTheme.xaml" />
+                <!-- Style Dictionaries -->
+                <ResourceDictionary Source="Resources/Styles/ButtonStyles.xaml" />
+                <ResourceDictionary Source="Resources/Styles/DataGridStyles.xaml" />
+                <ResourceDictionary Source="Resources/Styles/WindowStyles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- ViewModel -> View DataTemplates -->
+            <DataTemplate DataType="{x:Type vm:HomeViewModel}">
+                <views:HomeView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:SubjectListViewModel}">
+                <views:SubjectListView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:SubjectManagementViewModel}">
+                <views:SubjectManagementView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:KnowledgeTreeViewModel}">
+                <views:KnowledgeTreeView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:QuestionListViewModel}">
+                <views:QuestionListView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:AddQuestionViewModel}">
+                <views:AddQuestionView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
+                <views:SettingsView />
+            </DataTemplate>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

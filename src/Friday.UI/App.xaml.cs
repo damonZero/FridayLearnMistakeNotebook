@@ -4,6 +4,7 @@ using Friday.Application.Interfaces;
 using Friday.Application.Services;
 using Friday.Infrastructure.Persistence;
 using Friday.Infrastructure.Persistence.Repositories;
+using Friday.UI.Services;
 using Friday.UI.ViewModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -51,17 +52,22 @@ public partial class App : System.Windows.Application
         services.AddScoped<IKnowledgePointRepository, KnowledgePointRepository>();
         services.AddScoped<IQuestionRepository, QuestionRepository>();
 
-        // Services
+        // Application Services
         services.AddScoped<SubjectService>();
         services.AddScoped<KnowledgeTreeService>();
 
+        // Navigation Service
+        services.AddSingleton<NavigationService>();
+
         // ViewModels
         services.AddTransient<MainViewModel>();
+        services.AddTransient<HomeViewModel>();
         services.AddTransient<SubjectListViewModel>();
         services.AddTransient<SubjectManagementViewModel>();
         services.AddTransient<KnowledgeTreeViewModel>();
         services.AddTransient<QuestionListViewModel>();
         services.AddTransient<AddQuestionViewModel>();
+        services.AddTransient<SettingsViewModel>();
 
         // Main Window
         services.AddSingleton<MainWindow>();
