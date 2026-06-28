@@ -40,14 +40,14 @@ class BackupManager @Inject constructor(
      * 导出数据为 JSON
      */
     suspend fun exportToJson(): String = withContext(Dispatchers.IO) {
-        val subjects = database.subjectDao().getAllSubjects()
-        val questions = database.questionDao().getAllQuestions()
-        val aiConfigs = database.aiConfigDao().getAllAiConfigs()
+        val subjects = database.subjectDao().getAllSubjectsList()
+        val questions = database.questionDao().getAllQuestionsList()
+        val aiConfigs = database.aiConfigDao().getAllAiConfigsList()
 
         val backupData = BackupData(
-            subjects = emptyList(), // 需要收集 Flow
-            questions = emptyList(),
-            aiConfigs = emptyList()
+            subjects = subjects,
+            questions = questions,
+            aiConfigs = aiConfigs
         )
 
         gson.toJson(backupData)

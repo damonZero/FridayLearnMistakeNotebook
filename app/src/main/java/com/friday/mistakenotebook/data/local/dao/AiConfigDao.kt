@@ -11,6 +11,9 @@ interface AiConfigDao {
     @Query("SELECT * FROM ai_configs ORDER BY taskType ASC")
     fun getAllAiConfigs(): Flow<List<AiConfigEntity>>
 
+    @Query("SELECT * FROM ai_configs ORDER BY taskType ASC")
+    suspend fun getAllAiConfigsList(): List<AiConfigEntity>
+
     @Query("SELECT * FROM ai_configs WHERE taskType = :taskType AND isEnabled = 1 LIMIT 1")
     suspend fun getEnabledConfigByTaskType(taskType: AiTaskType): AiConfigEntity?
 

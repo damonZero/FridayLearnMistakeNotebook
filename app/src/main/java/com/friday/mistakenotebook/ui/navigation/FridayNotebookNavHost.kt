@@ -97,10 +97,10 @@ fun FridayNotebookNavHost() {
                 CameraScreen(
                     navController = navController,
                     onOcrComplete = { text ->
-                        // 将 OCR 结果传递回添加错题页面
                         navController.previousBackStackEntry
                             ?.savedStateHandle
                             ?.set("ocr_result", text)
+                        navController.popBackStack()
                     }
                 )
             }
@@ -129,3 +129,5 @@ fun FridayNotebookNavHost() {
         }
     }
 }
+
+

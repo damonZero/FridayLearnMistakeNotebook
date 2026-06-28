@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.friday.mistakenotebook.domain.model.Subject
+import com.friday.mistakenotebook.ui.navigation.Screen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,6 +52,14 @@ fun SubjectsScreen(
             ) {
                 CircularProgressIndicator()
             }
+        } else if (uiState.subjects.isEmpty()) {
+            EmptySubjectsContent(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                onAddSubject = { viewModel.showAddDialog() },
+                onGoHome = { navController.navigate(Screen.Home.route) }
+            )
         } else {
             LazyColumn(
                 modifier = Modifier
@@ -68,7 +77,6 @@ fun SubjectsScreen(
             }
         }
 
-        // 添加科目对话框
         if (uiState.showAddDialog) {
             AddSubjectDialog(
                 name = uiState.newSubjectName,
@@ -76,6 +84,42 @@ fun SubjectsScreen(
                 onConfirm = { viewModel.addSubject() },
                 onDismiss = { viewModel.hideAddDialog() }
             )
+        }
+    }
+}
+
+@Composable
+fun EmptySubjectsContent(
+    modifier: Modifier = Modifier,
+    onAddSubject: () -> Unit,
+    onGoHome: () -> Unit
+) {
+    Column(
+        modifier = modifier.padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(text = "📚", fontSize = 64.sp)
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "还没有科目",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "先添加科目，再开始录入错题。",
+            fontSize = 16.sp,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedButton(onClick = onGoHome) {
+                Text("回到首页")
+            }
+            Button(onClick = onAddSubject) {
+                Text("添加科目")
+            }
         }
     }
 }
@@ -103,10 +147,7 @@ fun SubjectCard(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = subject.icon,
-                fontSize = 32.sp
-            )
+            Text(text = subject.icon, fontSize = 32.sp)
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(

@@ -3,6 +3,7 @@ package com.friday.mistakenotebook.ui.camera
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.friday.mistakenotebook.data.remote.OcrResult
@@ -24,7 +25,8 @@ data class CameraUiState(
     val ocrResult: OcrResult? = null,
     val isProcessing: Boolean = false,
     val error: String? = null,
-    val isOcrComplete: Boolean = false
+    val isOcrComplete: Boolean = false,
+    val ocrHint: String? = null
 )
 
 @HiltViewModel
@@ -37,98 +39,101 @@ class CameraViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CameraUiState())
     val uiState: StateFlow<CameraUiState> = _uiState.asStateFlow()
 
-    /**
-     * 处理拍照结果
-     */
     fun onImageCaptured(uri: Uri) {
-        _uiState.update { it.copy(capturedImageUri = uri, isProcessing = true) }
+        _uiState.update { it.copy(capturedImageUri = uri, isProcessing = true, error = null, ocrHint = null) }
 
         viewModelScope.launch {
             try {
-                // 加载并压缩图片
-                val bitmap = imageUtil.loadLocalImage(uri.path ?: return@launch)
-                if (bitmap == null) {
-                    _uiState.update { it.copy(error = "无法加载图片", isProcessing = false) }
+                Log.d("OCR_CAMERA", "开始处理图片 URI: $uri")
+                val base64 = imageUtil.uriToBase64(context, uri)
+                if (base64 == null) {
+                    Log.e("OCR_CAMERA", "uriToBase64 返回 null，图片加载失败")
+                    _uiState.update { it.copy(error = "无法加载图片", isProcessing = false, ocrHint = "图片读取失败，请重新拍照或从相册选择") }
                     return@launch
                 }
+                Log.d("OCR_CAMERA", "图片转 Base64 成功，长度: ${base64.length}")
 
-                val compressedBitmap = imageUtil.compressBitmap(bitmap)
-                _uiState.update { it.copy(capturedBitmap = compressedBitmap) }
-
-                // 进行 OCR 识别
-                val base64 = imageUtil.bitmapToBase64(compressedBitmap)
+                Log.d("OCR_CAMERA", "开始调用 OCR 服务...")
                 val result = ocrService.recognizeText(base64)
+                Log.d("OCR_CAMERA", "OCR 识别完成: text=${result.text.take(50)}..., confidence=${result.confidence}")
 
                 _uiState.update {
                     it.copy(
                         ocrResult = result,
                         isProcessing = false,
-                        isOcrComplete = true
+                        isOcrComplete = true,
+                        ocrHint = when {
+                            result.confidence <= 0f && result.text.contains("为空") -> "这次没有识别到文字。请检查图片清晰度、光线或裁剪范围。"
+                            result.confidence <= 0f -> "识别结果异常。你可以重拍，或者直接手动输入。"
+                            else -> "识别完成。可直接使用结果，或先检查内容再保存。"
+                        }
                     )
                 }
             } catch (e: Exception) {
+                Log.e("OCR_CAMERA", "拍照处理失败: ${e.message}", e)
                 _uiState.update {
                     it.copy(
                         error = "处理失败: ${e.message}",
-                        isProcessing = false
+                        isProcessing = false,
+                        ocrHint = "识别失败，请重试或手动输入。"
                     )
                 }
             }
         }
     }
 
-    /**
-     * 处理从相册选择的图片
-     */
     fun onImageSelected(uri: Uri) {
-        _uiState.update { it.copy(capturedImageUri = uri, isProcessing = true) }
+        _uiState.update { it.copy(capturedImageUri = uri, isProcessing = true, error = null, ocrHint = null) }
 
         viewModelScope.launch {
             try {
+                Log.d("OCR_CAMERA", "开始处理相册图片 URI: $uri")
                 val base64 = imageUtil.uriToBase64(context, uri)
                 if (base64 == null) {
-                    _uiState.update { it.copy(error = "无法读取图片", isProcessing = false) }
+                    Log.e("OCR_CAMERA", "uriToBase64 返回 null，图片读取失败")
+                    _uiState.update { it.copy(error = "无法读取图片", isProcessing = false, ocrHint = "图片读取失败，请重新选择或更换图片。") }
                     return@launch
                 }
+                Log.d("OCR_CAMERA", "图片转 Base64 成功，长度: ${base64.length}")
 
+                Log.d("OCR_CAMERA", "开始调用 OCR 服务...")
                 val result = ocrService.recognizeText(base64)
+                Log.d("OCR_CAMERA", "OCR 识别完成: text=${result.text.take(50)}..., confidence=${result.confidence}")
                 _uiState.update {
                     it.copy(
                         ocrResult = result,
                         isProcessing = false,
-                        isOcrComplete = true
+                        isOcrComplete = true,
+                        ocrHint = when {
+                            result.confidence <= 0f && result.text.contains("为空") -> "这次没有识别到文字。请换一张更清晰的图片。"
+                            result.confidence <= 0f -> "识别结果异常。请重试或手动输入。"
+                            else -> "识别完成。可直接使用结果，或先检查内容再保存。"
+                        }
                     )
                 }
             } catch (e: Exception) {
+                Log.e("OCR_CAMERA", "相册图片识别失败: ${e.message}", e)
                 _uiState.update {
                     it.copy(
                         error = "识别失败: ${e.message}",
-                        isProcessing = false
+                        isProcessing = false,
+                        ocrHint = "识别失败，请重试或手动输入。"
                     )
                 }
             }
         }
     }
 
-    /**
-     * 保存图片到本地
-     */
     fun saveImageToLocal(): String? {
         val bitmap = _uiState.value.capturedBitmap ?: return null
         val filename = "question_${System.currentTimeMillis()}.jpg"
         return imageUtil.saveImageToLocal(context, bitmap, filename)
     }
 
-    /**
-     * 清除错误信息
-     */
     fun clearError() {
         _uiState.update { it.copy(error = null) }
     }
 
-    /**
-     * 重置状态
-     */
     fun reset() {
         _uiState.update { CameraUiState() }
     }

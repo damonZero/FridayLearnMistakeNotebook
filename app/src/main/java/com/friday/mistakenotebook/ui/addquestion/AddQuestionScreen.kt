@@ -37,15 +37,12 @@ fun AddQuestionScreen(
         }
     }
 
-    // 监听 OCR 结果
-    val ocrResult = navController.currentBackStackEntry
-        ?.savedStateHandle
-        ?.getLiveData<String>("ocr_result")
-        ?.value
-
-    LaunchedEffect(ocrResult) {
-        ocrResult?.let {
-            viewModel.updateContent(it)
+    val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
+    LaunchedEffect(savedStateHandle) {
+        val result = savedStateHandle?.get<String>("ocr_result")
+        if (!result.isNullOrBlank()) {
+            viewModel.createQuestionDraftFromOcr(result)
+            savedStateHandle.remove<String>("ocr_result")
         }
     }
 
@@ -73,7 +70,6 @@ fun AddQuestionScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            // 科目选择
             Text(
                 text = "选择科目",
                 fontSize = 16.sp,
@@ -95,7 +91,6 @@ fun AddQuestionScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // 拍照识别按钮
             OutlinedButton(
                 onClick = { navController.navigate(Screen.Camera.route) },
                 modifier = Modifier.fillMaxWidth()
@@ -105,9 +100,24 @@ fun AddQuestionScreen(
                 Text("拍照识别题目")
             }
 
+            if (uiState.ocrApplied) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                ) {
+                    Text(
+                        text = "识别结果已填入，请确认内容后保存",
+                        modifier = Modifier.padding(16.dp),
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 题目内容
             OutlinedTextField(
                 value = uiState.content,
                 onValueChange = { viewModel.updateContent(it) },
@@ -120,7 +130,6 @@ fun AddQuestionScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 正确答案
             OutlinedTextField(
                 value = uiState.answer,
                 onValueChange = { viewModel.updateAnswer(it) },
@@ -133,7 +142,6 @@ fun AddQuestionScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 我的答案
             OutlinedTextField(
                 value = uiState.userAnswer,
                 onValueChange = { viewModel.updateUserAnswer(it) },
@@ -146,7 +154,6 @@ fun AddQuestionScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // 错误类型
             Text(
                 text = "错误类型",
                 fontSize = 16.sp,
@@ -168,7 +175,6 @@ fun AddQuestionScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // 保存按钮
             Button(
                 onClick = { viewModel.saveQuestion() },
                 modifier = Modifier.fillMaxWidth(),
@@ -185,7 +191,6 @@ fun AddQuestionScreen(
             }
         }
 
-        // 错误提示
         uiState.errorMessage?.let { message ->
             AlertDialog(
                 onDismissRequest = { viewModel.clearError() },

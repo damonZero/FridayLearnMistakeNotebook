@@ -3,6 +3,7 @@ package com.friday.mistakenotebook.ui.questionlist
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -20,6 +21,7 @@ import androidx.navigation.NavController
 import com.friday.mistakenotebook.domain.algorithm.SpacedRepetitionAlgorithm
 import com.friday.mistakenotebook.domain.model.Question
 import com.friday.mistakenotebook.ui.addquestion.getErrorTypeName
+import com.friday.mistakenotebook.ui.navigation.Screen
 import com.friday.mistakenotebook.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,7 +34,7 @@ fun QuestionListScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     LaunchedEffect(subjectId) {
-        subjectId?.let { viewModel.selectSubject(it) }
+        viewModel.selectSubject(if (subjectId == -1L) null else subjectId)
     }
 
     Scaffold(
@@ -44,10 +46,18 @@ fun QuestionListScreen(
                         Icon(Icons.Default.ArrowBack, contentDescription = "返回")
                     }
                 },
+                actions = {
+                    if (uiState.searchQuery.isNotBlank() || uiState.selectedSubjectId != null) {
+                        TextButton(onClick = { viewModel.clearFilters() }) {
+                            Text("清除筛选")
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
                 )
             )
         }
@@ -57,14 +67,39 @@ fun QuestionListScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // 搜索栏
+            Text(
+                text = "科目筛选",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                item {
+                    FilterChip(
+                        selected = uiState.selectedSubjectId == null,
+                        onClick = { viewModel.selectSubject(null) },
+                        label = { Text("全部") }
+                    )
+                }
+                items(uiState.subjects) { subject ->
+                    FilterChip(
+                        selected = uiState.selectedSubjectId == subject.id,
+                        onClick = { viewModel.selectSubject(subject.id) },
+                        label = { Text(subject.name) }
+                    )
+                }
+            }
+
             OutlinedTextField(
                 value = uiState.searchQuery,
                 onValueChange = { viewModel.updateSearchQuery(it) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                placeholder = { Text("搜索题目...") },
+                placeholder = { Text("搜索题目或答案") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 trailingIcon = {
                     if (uiState.searchQuery.isNotEmpty()) {
@@ -76,7 +111,6 @@ fun QuestionListScreen(
                 singleLine = true
             )
 
-            // 题目列表
             if (uiState.isLoading) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -85,20 +119,11 @@ fun QuestionListScreen(
                     CircularProgressIndicator()
                 }
             } else if (uiState.questions.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(text = "📝", fontSize = 48.sp)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "暂无错题",
-                            fontSize = 18.sp,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                        )
-                    }
-                }
+                EmptyQuestionList(
+                    hasFilter = uiState.searchQuery.isNotBlank() || uiState.selectedSubjectId != null,
+                    onAddQuestion = { navController.navigate(Screen.AddQuestion.createRoute()) },
+                    onClearFilters = { viewModel.clearFilters() }
+                )
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -113,6 +138,46 @@ fun QuestionListScreen(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun EmptyQuestionList(
+    hasFilter: Boolean,
+    onAddQuestion: () -> Unit,
+    onClearFilters: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(text = if (hasFilter) "🔎" else "📝", fontSize = 56.sp)
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(
+            text = if (hasFilter) "没有符合条件的错题" else "暂无错题",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = if (hasFilter) "试试清除筛选，或者换个关键词" else "先添加一道错题开始使用",
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (hasFilter) {
+                OutlinedButton(onClick = onClearFilters) {
+                    Text("清除筛选")
+                }
+            }
+            Button(onClick = onAddQuestion) {
+                Text("添加错题")
             }
         }
     }
@@ -139,7 +204,6 @@ fun QuestionCard(
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
-            // 顶部：错误类型和掌握程度
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -167,7 +231,6 @@ fun QuestionCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // 题目内容
             Text(
                 text = question.content,
                 fontSize = 16.sp,
@@ -189,7 +252,6 @@ fun QuestionCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // 底部信息
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -238,3 +300,4 @@ fun QuestionCard(
         )
     }
 }
+

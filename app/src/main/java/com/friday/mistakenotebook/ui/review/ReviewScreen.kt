@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.friday.mistakenotebook.ui.navigation.Screen
 import com.friday.mistakenotebook.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -45,10 +46,18 @@ fun ReviewScreen(
                 }
             }
             uiState.isCompleted -> {
-                ReviewCompleteContent(modifier = Modifier.padding(padding))
+                ReviewCompleteContent(
+                    modifier = Modifier.padding(padding),
+                    onAddQuestion = { navController.navigate(Screen.AddQuestion.createRoute()) },
+                    onGoToList = { navController.navigate(Screen.QuestionList.createRoute()) }
+                )
             }
             uiState.questions.isEmpty() -> {
-                EmptyReviewContent(modifier = Modifier.padding(padding))
+                EmptyReviewContent(
+                    modifier = Modifier.padding(padding),
+                    onAddQuestion = { navController.navigate(Screen.AddQuestion.createRoute()) },
+                    onGoToList = { navController.navigate(Screen.QuestionList.createRoute()) }
+                )
             }
             else -> {
                 ReviewContent(
@@ -78,7 +87,6 @@ fun ReviewContent(
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        // 进度指示
         LinearProgressIndicator(
             progress = (uiState.currentIndex + 1).toFloat() / uiState.questions.size,
             modifier = Modifier.fillMaxWidth(),
@@ -93,7 +101,6 @@ fun ReviewContent(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // 题目卡片
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
@@ -134,7 +141,6 @@ fun ReviewContent(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 答案区域
         if (uiState.isAnswerShown) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -169,7 +175,6 @@ fun ReviewContent(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // 操作按钮
         if (uiState.isAnswerShown) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -199,9 +204,15 @@ fun ReviewContent(
 }
 
 @Composable
-fun EmptyReviewContent(modifier: Modifier = Modifier) {
+fun EmptyReviewContent(
+    modifier: Modifier = Modifier,
+    onAddQuestion: () -> Unit,
+    onGoToList: () -> Unit
+) {
     Column(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -214,17 +225,32 @@ fun EmptyReviewContent(modifier: Modifier = Modifier) {
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "快去添加错题吧！",
+            text = "先添加错题，系统才会生成复习任务。",
             fontSize = 16.sp,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
         )
+        Spacer(modifier = Modifier.height(16.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedButton(onClick = onGoToList) {
+                Text("查看错题")
+            }
+            Button(onClick = onAddQuestion) {
+                Text("添加错题")
+            }
+        }
     }
 }
 
 @Composable
-fun ReviewCompleteContent(modifier: Modifier = Modifier) {
+fun ReviewCompleteContent(
+    modifier: Modifier = Modifier,
+    onAddQuestion: () -> Unit,
+    onGoToList: () -> Unit
+) {
     Column(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -237,9 +263,18 @@ fun ReviewCompleteContent(modifier: Modifier = Modifier) {
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "太棒了，继续保持！",
+            text = "今天的复习已经结束，可以继续补充错题。",
             fontSize = 16.sp,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
         )
+        Spacer(modifier = Modifier.height(16.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedButton(onClick = onGoToList) {
+                Text("查看错题")
+            }
+            Button(onClick = onAddQuestion) {
+                Text("继续添加")
+            }
+        }
     }
 }

@@ -35,10 +35,7 @@ fun CameraScreen(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
 
-    // 创建临时文件用于保存拍照图片
-    val imageFile = remember {
-        File(context.cacheDir, "camera_photo.jpg")
-    }
+    val imageFile = remember { File(context.cacheDir, "camera_photo.jpg") }
     val imageUri = remember {
         FileProvider.getUriForFile(
             context,
@@ -47,32 +44,22 @@ fun CameraScreen(
         )
     }
 
-    // 相机权限请求
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            // 权限已授予，可以打开相机
-        }
-    }
+    ) { }
 
-    // 拍照
     val takePictureLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.TakePicture()
     ) { success ->
-        if (success) {
-            viewModel.onImageCaptured(imageUri)
-        }
+        if (success) viewModel.onImageCaptured(imageUri)
     }
 
-    // 从相册选择
     val pickImageLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let { viewModel.onImageSelected(it) }
     }
 
-    // 检查相机权限
     fun checkCameraPermission(): Boolean {
         return ContextCompat.checkSelfPermission(
             context,
@@ -104,7 +91,6 @@ fun CameraScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 图片预览区域
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -141,7 +127,6 @@ fun CameraScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // 操作按钮
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -173,55 +158,76 @@ fun CameraScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // OCR 结果显示
             if (uiState.isProcessing) {
                 CircularProgressIndicator()
                 Spacer(modifier = Modifier.height(8.dp))
                 Text("正在识别中...")
             }
 
-            if (uiState.ocrResult != null) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "识别结果",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 16.sp
+            uiState.ocrHint?.let { hint ->
+                Spacer(modifier = Modifier.height(12.dp))
+                AssistChip(
+                    onClick = { },
+                    label = { Text(hint) }
+                )
+            }
+
+            when {
+                uiState.ocrResult != null && uiState.ocrResult!!.confidence > 0f -> {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "识别结果",
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 16.sp
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = uiState.ocrResult!!.text,
+                                fontSize = 14.sp,
+                                lineHeight = 22.sp
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "置信度: ${(uiState.ocrResult!!.confidence * 100).toInt()}%",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Button(
+                        onClick = { onOcrComplete(uiState.ocrResult!!.text) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("使用此结果")
+                    }
+                }
+                uiState.ocrResult != null && uiState.ocrResult!!.confidence <= 0f -> {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer
+                        )
+                    ) {
                         Text(
                             text = uiState.ocrResult!!.text,
-                            fontSize = 14.sp,
-                            lineHeight = 22.sp
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "置信度: ${(uiState.ocrResult!!.confidence * 100).toInt()}%",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            modifier = Modifier.padding(16.dp),
+                            color = MaterialTheme.colorScheme.onErrorContainer
                         )
                     }
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Button(
-                    onClick = {
-                        onOcrComplete(uiState.ocrResult!!.text)
-                        navController.popBackStack()
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("使用此结果")
-                }
             }
 
-            // 错误提示
             uiState.error?.let { error ->
                 Spacer(modifier = Modifier.height(16.dp))
                 Card(

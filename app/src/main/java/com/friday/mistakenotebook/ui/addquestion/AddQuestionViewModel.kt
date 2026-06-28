@@ -7,7 +7,11 @@ import com.friday.mistakenotebook.domain.model.Subject
 import com.friday.mistakenotebook.domain.repository.QuestionRepository
 import com.friday.mistakenotebook.domain.repository.SubjectRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -20,6 +24,7 @@ data class AddQuestionUiState(
     val errorType: ErrorType = ErrorType.UNKNOWN,
     val isLoading: Boolean = false,
     val isSaved: Boolean = false,
+    val ocrApplied: Boolean = false,
     val errorMessage: String? = null
 )
 
@@ -69,15 +74,34 @@ class AddQuestionViewModel @Inject constructor(
         _uiState.update { it.copy(errorType = errorType) }
     }
 
-    fun saveQuestion() {
-        val state = _uiState.value
+    fun applyOcrResult(content: String) {
+        _uiState.update {
+            it.copy(
+                content = content.trim(),
+                ocrApplied = true,
+                isSaved = false
+            )
+        }
+    }
 
+    fun createQuestionDraftFromOcr(content: String) {
+        val normalizedContent = content.trim()
+        if (normalizedContent.isBlank()) return
+        applyOcrResult(normalizedContent)
+    }
+
+    fun saveQuestion() {
+        saveQuestionInternal(_uiState.value)
+    }
+
+    private fun saveQuestionInternal(state: AddQuestionUiState) {
         if (state.content.isBlank()) {
             _uiState.update { it.copy(errorMessage = "请输入题目内容") }
             return
         }
 
-        if (state.selectedSubjectId == null) {
+        val subjectId = state.selectedSubjectId ?: state.subjects.firstOrNull()?.id
+        if (subjectId == null) {
             _uiState.update { it.copy(errorMessage = "请选择科目") }
             return
         }
@@ -86,13 +110,20 @@ class AddQuestionViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
             try {
                 questionRepository.addQuestion(
-                    subjectId = state.selectedSubjectId,
+                    subjectId = subjectId,
                     content = state.content,
                     answer = state.answer,
                     userAnswer = state.userAnswer,
                     errorType = state.errorType
                 )
-                _uiState.update { it.copy(isLoading = false, isSaved = true) }
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        isSaved = true,
+                        selectedSubjectId = subjectId,
+                        ocrApplied = false
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(

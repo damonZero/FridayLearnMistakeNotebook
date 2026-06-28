@@ -10,6 +10,9 @@ interface QuestionDao {
     @Query("SELECT * FROM questions ORDER BY createdAt DESC")
     fun getAllQuestions(): Flow<List<QuestionEntity>>
 
+    @Query("SELECT * FROM questions ORDER BY createdAt DESC")
+    suspend fun getAllQuestionsList(): List<QuestionEntity>
+
     @Query("SELECT * FROM questions WHERE subjectId = :subjectId ORDER BY createdAt DESC")
     fun getQuestionsBySubject(subjectId: Long): Flow<List<QuestionEntity>>
 

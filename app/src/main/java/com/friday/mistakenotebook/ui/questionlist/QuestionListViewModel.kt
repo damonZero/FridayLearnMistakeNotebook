@@ -3,15 +3,21 @@ package com.friday.mistakenotebook.ui.questionlist
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.friday.mistakenotebook.domain.model.Question
+import com.friday.mistakenotebook.domain.model.Subject
 import com.friday.mistakenotebook.domain.repository.QuestionRepository
 import com.friday.mistakenotebook.domain.repository.SubjectRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class QuestionListUiState(
     val questions: List<Question> = emptyList(),
+    val subjects: List<Subject> = emptyList(),
     val isLoading: Boolean = true,
     val searchQuery: String = "",
     val selectedSubjectId: Long? = null
@@ -29,7 +35,22 @@ class QuestionListViewModel @Inject constructor(
     private var allQuestions: List<Question> = emptyList()
 
     init {
+        loadSubjects()
         loadQuestions()
+    }
+
+    private fun loadSubjects() {
+        viewModelScope.launch {
+            subjectRepository.getAllSubjects().collect { subjects ->
+                _uiState.update {
+                    it.copy(
+                        subjects = subjects,
+                        selectedSubjectId = it.selectedSubjectId ?: subjects.firstOrNull()?.id
+                    )
+                }
+                filterQuestions()
+            }
+        }
     }
 
     private fun loadQuestions() {
@@ -48,6 +69,11 @@ class QuestionListViewModel @Inject constructor(
 
     fun selectSubject(subjectId: Long?) {
         _uiState.update { it.copy(selectedSubjectId = subjectId) }
+        filterQuestions()
+    }
+
+    fun clearFilters() {
+        _uiState.update { it.copy(searchQuery = "", selectedSubjectId = null) }
         filterQuestions()
     }
 
