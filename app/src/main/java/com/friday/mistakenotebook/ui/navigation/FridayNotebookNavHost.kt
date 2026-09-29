@@ -90,7 +90,8 @@ fun FridayNotebookNavHost() {
                 val subjectId = backStackEntry.arguments?.getString("subjectId")?.toLongOrNull()
                 AddQuestionScreen(
                     navController = navController,
-                    subjectId = if (subjectId == -1L) null else subjectId
+                    subjectId = if (subjectId == -1L) null else subjectId,
+                    backStackEntry = backStackEntry
                 )
             }
             composable(Screen.Camera.route) {

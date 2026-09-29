@@ -109,6 +109,9 @@ dependencies {
     // Coil for image loading
     implementation("io.coil-kt:coil-compose:2.5.0")
 
+    // ExifInterface for image orientation
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
+
     // OkHttp for network requests
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")

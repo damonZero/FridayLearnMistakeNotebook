@@ -9,7 +9,9 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
 import okhttp3.logging.HttpLoggingInterceptor
+import java.io.IOException
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -26,10 +28,12 @@ class VolcanoOcrService @Inject constructor(
         .addInterceptor(HttpLoggingInterceptor { message ->
             Log.d("OCR_HTTP", message)
         }.apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            // BASIC 级别：BODY 会把整张图的 base64 和 Authorization 头写进 logcat
+            level = HttpLoggingInterceptor.Level.BASIC
         })
         .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(60, TimeUnit.SECONDS)
+        .readTimeout(120, TimeUnit.SECONDS)
         .build()
 
     override suspend fun recognizeText(imageBase64: String): OcrResult = withContext(Dispatchers.IO) {
@@ -48,14 +52,13 @@ class VolcanoOcrService @Inject constructor(
                 .post(requestBody.toRequestBody("application/json".toMediaType()))
                 .build()
 
-            val response = client.newCall(request).execute()
-            val responseBody = response.body?.string() ?: throw Exception("Empty response")
-
+            val response = executeWithRetry(request)
             if (!response.isSuccessful) {
-                throw Exception("HTTP ${response.code}: $responseBody")
+                throw Exception("HTTP ${response.code}: ${response.body?.string()?.take(300)}")
             }
+            val body = response.body?.string() ?: throw Exception("Empty response")
 
-            when (val parsed = OcrResponseParser.parse(responseBody)) {
+            when (val parsed = OcrResponseParser.parse(body)) {
                 is OcrParseResult.Success -> parsed.result
                 OcrParseResult.EmptyContent -> OcrResult(
                     text = "OCR 返回为空，请检查图片是否清晰，或手动输入题目内容",
@@ -76,6 +79,26 @@ class VolcanoOcrService @Inject constructor(
                 confidence = 0f
             )
         }
+    }
+
+    /**
+     * 执行请求，遇到瞬时网络错误（断连、超时）自动重试一次；
+     * 大图上传 + 大模型推理经常超过单次连接的容忍时间，直接失败对用户来说就是"识别是空的"
+     */
+    private fun executeWithRetry(request: Request, maxAttempts: Int = 2): Response {
+        var lastException: IOException? = null
+        repeat(maxAttempts) { attempt ->
+            try {
+                return client.newCall(request).execute()
+            } catch (e: IOException) {
+                lastException = e
+                Log.w("OCR_HTTP", "请求失败 (第 ${attempt + 1} 次): ${e.message}")
+                if (attempt < maxAttempts - 1) {
+                    Thread.sleep(1000)
+                }
+            }
+        }
+        throw lastException ?: IOException("请求失败")
     }
 
     private fun buildRequestBody(imageBase64: String, modelName: String): String {

@@ -1,6 +1,8 @@
 package com.friday.mistakenotebook.ui.addquestion
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -12,6 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
 import com.friday.mistakenotebook.data.local.entity.ErrorType
 import com.friday.mistakenotebook.ui.navigation.Screen
@@ -21,6 +24,7 @@ import com.friday.mistakenotebook.ui.navigation.Screen
 fun AddQuestionScreen(
     navController: NavController,
     subjectId: Long? = null,
+    backStackEntry: NavBackStackEntry? = null,
     viewModel: AddQuestionViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -37,7 +41,10 @@ fun AddQuestionScreen(
         }
     }
 
-    val savedStateHandle = navController.currentBackStackEntry?.savedStateHandle
+    // 从相机页接收 OCR 结果：必须读本页自己的 backStackEntry，
+    // navController.currentBackStackEntry 在 popBackStack 转场期间可能还指向相机页，会丢失结果
+    val savedStateHandle = backStackEntry?.savedStateHandle
+        ?: navController.currentBackStackEntry?.savedStateHandle
     LaunchedEffect(savedStateHandle) {
         val result = savedStateHandle?.get<String>("ocr_result")
         if (!result.isNullOrBlank()) {
@@ -67,6 +74,7 @@ fun AddQuestionScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .imePadding()
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
@@ -76,11 +84,11 @@ fun AddQuestionScreen(
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
-            Row(
+            LazyRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                uiState.subjects.forEach { subject ->
+                items(uiState.subjects) { subject ->
                     FilterChip(
                         selected = uiState.selectedSubjectId == subject.id,
                         onClick = { viewModel.selectSubject(subject.id) },
@@ -125,7 +133,14 @@ fun AddQuestionScreen(
                 placeholder = { Text("请输入题目内容") },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 4,
-                maxLines = 8
+                maxLines = 8,
+                supportingText = {
+                    Text(
+                        text = "${uiState.content.length}/2000",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -160,11 +175,11 @@ fun AddQuestionScreen(
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
-            Row(
+            LazyRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                ErrorType.entries.forEach { type ->
+                items(ErrorType.entries) { type ->
                     FilterChip(
                         selected = uiState.errorType == type,
                         onClick = { viewModel.updateErrorType(type) },

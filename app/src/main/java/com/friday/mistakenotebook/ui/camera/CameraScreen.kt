@@ -44,14 +44,24 @@ fun CameraScreen(
         )
     }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { }
-
     val takePictureLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.TakePicture()
     ) { success ->
         if (success) viewModel.onImageCaptured(imageUri)
+    }
+
+    // 拒绝/授予相机权限后的处理：授予则直接继续拍照，拒绝则在页面给出提示
+    var showPermissionDeniedHint by remember { mutableStateOf(false) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            showPermissionDeniedHint = false
+            takePictureLauncher.launch(imageUri)
+        } else {
+            showPermissionDeniedHint = true
+        }
     }
 
     val pickImageLauncher = rememberLauncherForActivityResult(
@@ -153,6 +163,22 @@ fun CameraScreen(
                     Icon(Icons.Default.PhotoLibrary, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("相册")
+                }
+            }
+
+            if (showPermissionDeniedHint) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
+                ) {
+                    Text(
+                        text = "需要相机权限才能拍照，请在设置中开启",
+                        modifier = Modifier.padding(16.dp),
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
                 }
             }
 

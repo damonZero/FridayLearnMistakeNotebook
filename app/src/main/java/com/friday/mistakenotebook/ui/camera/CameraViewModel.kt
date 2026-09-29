@@ -40,7 +40,16 @@ class CameraViewModel @Inject constructor(
     val uiState: StateFlow<CameraUiState> = _uiState.asStateFlow()
 
     fun onImageCaptured(uri: Uri) {
-        _uiState.update { it.copy(capturedImageUri = uri, isProcessing = true, error = null, ocrHint = null) }
+        _uiState.update {
+            it.copy(
+                capturedImageUri = uri,
+                isProcessing = true,
+                error = null,
+                ocrHint = null,
+                ocrResult = null,
+                isOcrComplete = false
+            )
+        }
 
         viewModelScope.launch {
             try {
@@ -83,7 +92,16 @@ class CameraViewModel @Inject constructor(
     }
 
     fun onImageSelected(uri: Uri) {
-        _uiState.update { it.copy(capturedImageUri = uri, isProcessing = true, error = null, ocrHint = null) }
+        _uiState.update {
+            it.copy(
+                capturedImageUri = uri,
+                isProcessing = true,
+                error = null,
+                ocrHint = null,
+                ocrResult = null,
+                isOcrComplete = false
+            )
+        }
 
         viewModelScope.launch {
             try {

@@ -59,6 +59,15 @@ class AddQuestionViewModel @Inject constructor(
     }
 
     fun updateContent(content: String) {
+        if (content.length > MAX_CONTENT_LENGTH) {
+            _uiState.update {
+                it.copy(
+                    content = content.take(MAX_CONTENT_LENGTH),
+                    errorMessage = "题目内容不能超过 2000 字"
+                )
+            }
+            return
+        }
         _uiState.update { it.copy(content = content) }
     }
 
@@ -95,8 +104,16 @@ class AddQuestionViewModel @Inject constructor(
     }
 
     private fun saveQuestionInternal(state: AddQuestionUiState) {
+        // 防止重复提交：正在保存时直接忽略
+        if (state.isLoading) return
+
         if (state.content.isBlank()) {
             _uiState.update { it.copy(errorMessage = "请输入题目内容") }
+            return
+        }
+
+        if (state.content.length > MAX_CONTENT_LENGTH) {
+            _uiState.update { it.copy(errorMessage = "题目内容不能超过 2000 字") }
             return
         }
 
@@ -137,5 +154,9 @@ class AddQuestionViewModel @Inject constructor(
 
     fun clearError() {
         _uiState.update { it.copy(errorMessage = null) }
+    }
+
+    companion object {
+        private const val MAX_CONTENT_LENGTH = 2000
     }
 }
