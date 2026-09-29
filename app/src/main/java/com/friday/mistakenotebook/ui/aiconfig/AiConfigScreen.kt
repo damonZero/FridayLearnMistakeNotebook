@@ -10,12 +10,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.friday.mistakenotebook.data.local.entity.AiConfigEntity
 import com.friday.mistakenotebook.data.local.entity.AiTaskType
+import com.friday.mistakenotebook.data.remote.TestResult
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -162,7 +165,7 @@ fun AiConfigCard(
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
             )
             Text(
-                text = "API Key: ${config.apiKey.take(8)}...",
+                text = "API Key: ${maskApiKey(config.apiKey)}",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
             )
@@ -238,13 +241,27 @@ fun AiConfigDialog(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // API Key
+                // API Key（默认遮蔽，点眼睛图标切换明文）
+                var showApiKey by remember { mutableStateOf(false) }
                 OutlinedTextField(
                     value = uiState.apiKey,
                     onValueChange = onApiKeyChange,
                     label = { Text("API Key") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
+                    visualTransformation = if (showApiKey) {
+                        VisualTransformation.None
+                    } else {
+                        PasswordVisualTransformation()
+                    },
+                    trailingIcon = {
+                        IconButton(onClick = { showApiKey = !showApiKey }) {
+                            Icon(
+                                imageVector = if (showApiKey) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                contentDescription = if (showApiKey) "隐藏 API Key" else "显示 API Key"
+                            )
+                        }
+                    }
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -294,13 +311,14 @@ fun AiConfigDialog(
                 // 测试结果
                 uiState.testResult?.let { result ->
                     Spacer(modifier = Modifier.height(8.dp))
+                    val (message, color) = when (result) {
+                        is TestResult.Success -> result.message to MaterialTheme.colorScheme.primary
+                        is TestResult.Failure -> result.message to MaterialTheme.colorScheme.error
+                    }
                     Text(
-                        text = result,
+                        text = message,
                         fontSize = 14.sp,
-                        color = if (result.contains("成功"))
-                            MaterialTheme.colorScheme.primary
-                        else
-                            MaterialTheme.colorScheme.error
+                        color = color
                     )
                 }
             }
@@ -320,7 +338,7 @@ fun AiConfigDialog(
                 Spacer(modifier = Modifier.width(8.dp))
                 TextButton(
                     onClick = onSave,
-                    enabled = uiState.apiKey.isNotBlank()
+                    enabled = !uiState.isTesting && uiState.canSave
                 ) {
                     Text("保存")
                 }
@@ -340,4 +358,11 @@ fun getTaskTypeName(type: AiTaskType): String {
         AiTaskType.ANALYSIS -> "错题分析"
         AiTaskType.GENERATE -> "生成相似题"
     }
+}
+
+/**
+ * 遮蔽 API Key：长度足够时只露出末 4 位，否则全部遮蔽
+ */
+private fun maskApiKey(apiKey: String): String {
+    return if (apiKey.length >= 8) "••••${apiKey.takeLast(4)}" else "••••"
 }

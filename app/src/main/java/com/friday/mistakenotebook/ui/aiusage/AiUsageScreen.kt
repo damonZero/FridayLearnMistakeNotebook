@@ -26,8 +26,17 @@ fun AiUsageScreen(
     viewModel: AiUsageViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    var showClearConfirmDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        viewModel.cleanupEvent.collect { message ->
+            snackbarHostState.showSnackbar(message)
+        }
+    }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("AI 使用统计", fontWeight = FontWeight.Bold) },
@@ -37,7 +46,7 @@ fun AiUsageScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.clearOldLogs() }) {
+                    IconButton(onClick = { showClearConfirmDialog = true }) {
                         Icon(Icons.Default.DeleteSweep, contentDescription = "清理旧日志")
                     }
                 },
@@ -124,6 +133,30 @@ fun AiUsageScreen(
                     }
                 }
             }
+        }
+
+        // 清理旧日志确认框
+        if (showClearConfirmDialog) {
+            AlertDialog(
+                onDismissRequest = { showClearConfirmDialog = false },
+                title = { Text("确认清理") },
+                text = { Text("将删除 30 天前的所有调用记录，不可恢复") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showClearConfirmDialog = false
+                            viewModel.clearOldLogs()
+                        }
+                    ) {
+                        Text("清理", color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showClearConfirmDialog = false }) {
+                        Text("取消")
+                    }
+                }
+            )
         }
     }
 }
