@@ -66,6 +66,7 @@ fun QuestionListScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .imePadding()
         ) {
             Text(
                 text = "科目筛选",

@@ -2,10 +2,14 @@ package com.friday.mistakenotebook.ui.achievement
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.friday.mistakenotebook.domain.model.Question
 import com.friday.mistakenotebook.domain.repository.QuestionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 
 data class Achievement(
@@ -52,6 +56,41 @@ class AchievementViewModel @Inject constructor(
                 updateAchievements()
             }
         }
+
+        viewModelScope.launch {
+            // 连续复习天数
+            questionRepository.getAllQuestions().collect { questions ->
+                val streak = calculateStreakDays(questions)
+                _uiState.update { it.copy(streakDays = streak) }
+                updateAchievements()
+            }
+        }
+    }
+
+    /**
+     * 连续复习天数：把所有题目的最近复习日期按本地时区截断到天并去重，
+     * 从今天往回数连续天数（今天还没复习不打断记录，从昨天起算）。
+     */
+    private fun calculateStreakDays(questions: List<Question>): Int {
+        val reviewDates = questions.mapNotNull { question ->
+            question.lastReviewDate?.let { timestamp ->
+                Instant.ofEpochMilli(timestamp)
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDate()
+            }
+        }.toSet()
+        if (reviewDates.isEmpty()) return 0
+
+        var day = LocalDate.now()
+        if (day !in reviewDates) {
+            day = day.minusDays(1)
+        }
+        var streak = 0
+        while (day in reviewDates) {
+            streak++
+            day = day.minusDays(1)
+        }
+        return streak
     }
 
     private fun updateAchievements() {

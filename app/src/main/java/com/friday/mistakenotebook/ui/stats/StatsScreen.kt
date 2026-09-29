@@ -1,6 +1,9 @@
 package com.friday.mistakenotebook.ui.stats
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -53,6 +56,7 @@ fun StatsScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
+                    .verticalScroll(rememberScrollState())
                     .padding(16.dp)
             ) {
                 // 掌握率卡片
@@ -111,7 +115,7 @@ fun StatsScreen(
                     )
                     StatCard(
                         modifier = Modifier.weight(1f),
-                        title = "今日复习",
+                        title = "待复习",
                         value = uiState.todayReviewCount.toString(),
                         icon = "📝",
                         color = NeedReviewRed
@@ -128,22 +132,23 @@ fun StatsScreen(
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
 
+                // 亮黄在浅色主题白底上对比度不足，浅色主题改用深琥珀色
+                val learningColor = if (isSystemInDarkTheme()) LearningYellow else LearningAmber
+
                 MasteryLevelItem(
                     level = "新题/答错",
                     color = NeedReviewRed,
-                    percentage = if (uiState.totalQuestions > 0) {
-                        ((uiState.totalQuestions - uiState.masteredQuestions) * 100 / uiState.totalQuestions)
-                    } else 0
+                    percentage = uiState.distribution.newPercentage
                 )
                 MasteryLevelItem(
                     level = "学习中",
-                    color = LearningYellow,
-                    percentage = 30
+                    color = learningColor,
+                    percentage = uiState.distribution.learningPercentage
                 )
                 MasteryLevelItem(
                     level = "已掌握",
                     color = MasteredGreen,
-                    percentage = uiState.masteryPercentage
+                    percentage = uiState.distribution.masteredPercentage
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))

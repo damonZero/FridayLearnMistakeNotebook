@@ -7,6 +7,8 @@ import com.friday.mistakenotebook.domain.model.Subject
 import com.friday.mistakenotebook.domain.repository.QuestionRepository
 import com.friday.mistakenotebook.domain.repository.SubjectRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,6 +35,7 @@ class QuestionListViewModel @Inject constructor(
     val uiState: StateFlow<QuestionListUiState> = _uiState.asStateFlow()
 
     private var allQuestions: List<Question> = emptyList()
+    private var searchDebounceJob: Job? = null
 
     init {
         loadSubjects()
@@ -42,12 +45,9 @@ class QuestionListViewModel @Inject constructor(
     private fun loadSubjects() {
         viewModelScope.launch {
             subjectRepository.getAllSubjects().collect { subjects ->
-                _uiState.update {
-                    it.copy(
-                        subjects = subjects,
-                        selectedSubjectId = it.selectedSubjectId ?: subjects.firstOrNull()?.id
-                    )
-                }
+                // 注意：selectedSubjectId 为 null 表示"全部"，是合法筛选状态，
+                // 不能在这里改写成第一个科目，否则从首页"查看全部错题"进入时会被覆盖
+                _uiState.update { it.copy(subjects = subjects) }
                 filterQuestions()
             }
         }
@@ -64,7 +64,12 @@ class QuestionListViewModel @Inject constructor(
 
     fun updateSearchQuery(query: String) {
         _uiState.update { it.copy(searchQuery = query) }
-        filterQuestions()
+        // 300ms 防抖：输入停止后再过滤，避免每敲一个字都全量过滤
+        searchDebounceJob?.cancel()
+        searchDebounceJob = viewModelScope.launch {
+            delay(SEARCH_DEBOUNCE_MILLIS)
+            filterQuestions()
+        }
     }
 
     fun selectSubject(subjectId: Long?) {
@@ -73,6 +78,7 @@ class QuestionListViewModel @Inject constructor(
     }
 
     fun clearFilters() {
+        searchDebounceJob?.cancel()
         _uiState.update { it.copy(searchQuery = "", selectedSubjectId = null) }
         filterQuestions()
     }
@@ -94,5 +100,9 @@ class QuestionListViewModel @Inject constructor(
         viewModelScope.launch {
             questionRepository.deleteQuestion(id)
         }
+    }
+
+    companion object {
+        private const val SEARCH_DEBOUNCE_MILLIS = 300L
     }
 }

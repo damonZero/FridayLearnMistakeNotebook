@@ -20,6 +20,13 @@ val SubjectEnglish = Color(0xFF66BB6A)  // 英语 - 绿色
 val MasteredGreen = Color(0xFF4CAF50)
 val LearningYellow = Color(0xFFFFC107)
 val NeedReviewRed = Color(0xFFFF5722)
+val LearningAmber = Color(0xFFB7791F)   // 学习中 - 深琥珀（浅色主题白底上比亮黄更清晰）
+
+// primaryContainer 配色（亮红底配深字对比度不足，按深浅主题区分）
+val PrimaryContainerLight = Color(0xFFFFE3E2)   // 浅色主题 - 低饱和浅红容器
+val OnPrimaryContainerLight = Color(0xFF7A2E2E) // 浅色主题 - 深红文字
+val PrimaryContainerDark = Color(0xFF5C2323)    // 深色主题 - 暗红容器
+val OnPrimaryContainerDark = Color(0xFFFFDAD9)  // 深色主题 - 浅红文字
 
 // 卡片颜色
 val CardColors = listOf(

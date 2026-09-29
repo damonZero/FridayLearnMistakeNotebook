@@ -17,12 +17,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.friday.mistakenotebook.ui.navigation.Screen
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     navController: NavController
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -32,7 +36,8 @@ fun SettingsScreen(
                     titleContentColor = MaterialTheme.colorScheme.onPrimary
                 )
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -78,7 +83,9 @@ fun SettingsScreen(
                     icon = Icons.Default.Notifications,
                     title = "复习提醒",
                     subtitle = "设置每日复习提醒时间",
-                    onClick = { /* TODO: 提醒设置 */ }
+                    onClick = {
+                        scope.launch { snackbarHostState.showSnackbar("功能开发中") }
+                    }
                 )
             }
 
@@ -88,7 +95,9 @@ fun SettingsScreen(
                     icon = Icons.Default.Info,
                     title = "关于周周错题本",
                     subtitle = "版本 1.0.0",
-                    onClick = { /* TODO: 关于页面 */ }
+                    onClick = {
+                        scope.launch { snackbarHostState.showSnackbar("功能开发中") }
+                    }
                 )
             }
 

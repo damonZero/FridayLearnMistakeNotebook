@@ -80,6 +80,7 @@ fun SubjectsScreen(
         if (uiState.showAddDialog) {
             AddSubjectDialog(
                 name = uiState.newSubjectName,
+                errorMessage = uiState.errorMessage,
                 onNameChange = { viewModel.updateNewSubjectName(it) },
                 onConfirm = { viewModel.addSubject() },
                 onDismiss = { viewModel.hideAddDialog() }
@@ -202,6 +203,7 @@ fun SubjectCard(
 @Composable
 fun AddSubjectDialog(
     name: String,
+    errorMessage: String? = null,
     onNameChange: (String) -> Unit,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
@@ -214,6 +216,15 @@ fun AddSubjectDialog(
                 value = name,
                 onValueChange = onNameChange,
                 label = { Text("科目名称") },
+                isError = errorMessage != null,
+                supportingText = if (errorMessage != null) {
+                    {
+                        Text(
+                            text = errorMessage,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                } else null,
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
