@@ -1,7 +1,6 @@
 package com.friday.mistakenotebook.domain.algorithm
 
 import com.friday.mistakenotebook.data.local.entity.QuestionEntity
-import kotlin.math.max
 import kotlin.math.roundToInt
 
 /**
@@ -10,7 +9,11 @@ import kotlin.math.roundToInt
  */
 object SpacedRepetitionAlgorithm {
 
-    // 莱特纳盒子对应的天数间隔
+    // 难度系数（EF）上下限：下限防止间隔缩到 0，上限防止无限膨胀
+    private const val MIN_EASE_FACTOR = 1.3f
+    private const val MAX_EASE_FACTOR = 2.5f
+
+    // 莱特纳盒子对应的基础天数间隔
     private val BOX_INTERVALS = mapOf(
         1 to 1,   // 盒子1：每天复习
         2 to 2,   // 盒子2：每2天复习
@@ -23,7 +26,8 @@ object SpacedRepetitionAlgorithm {
      * 计算下次复习时间
      */
     fun calculateNextReview(question: QuestionEntity, score: Int): QuestionEntity {
-        val isCorrect = score >= 3
+        val clampedScore = score.coerceIn(1, 5)
+        val isCorrect = clampedScore >= 3
         val newLeitnerBox = if (isCorrect) {
             minOf(question.leitnerBox + 1, 5)
         } else {
@@ -31,10 +35,17 @@ object SpacedRepetitionAlgorithm {
         }
 
         val newStreak = if (isCorrect) question.streak + 1 else 0
-        val newEaseFactor = calculateNewEaseFactor(question.easeFactor, score)
-        val baseInterval = BOX_INTERVALS[newLeitnerBox] ?: 1
-        val intervalDays = (baseInterval * newEaseFactor).roundToInt()
-            .coerceAtLeast(1)
+        val newEaseFactor = calculateNewEaseFactor(question.easeFactor, clampedScore)
+
+        val intervalDays = if (isCorrect) {
+            // 答对：基础间隔（新盒子）× EF
+            val baseInterval = BOX_INTERVALS[newLeitnerBox] ?: 1
+            (baseInterval * newEaseFactor).roundToInt()
+                .coerceAtLeast(1)
+        } else {
+            // 答错：固定间隔 1 天（不乘 EF），保证次日必现
+            1
+        }
 
         val nextReviewDate = System.currentTimeMillis() + intervalDays * 24 * 60 * 60 * 1000L
 
@@ -53,11 +64,12 @@ object SpacedRepetitionAlgorithm {
     /**
      * 计算新的难度系数
      * 公式：EF' = EF + (0.1 - (5-score) * (0.08 + (5-score) * 0.02))
+     * 结果夹在 [1.3, 2.5]
      */
     private fun calculateNewEaseFactor(oldEF: Float, score: Int): Float {
         val diff = 5 - score
         val newEF = oldEF + (0.1f - diff * (0.08f + diff * 0.02f))
-        return max(1.3f, newEF)
+        return newEF.coerceIn(MIN_EASE_FACTOR, MAX_EASE_FACTOR)
     }
 
     /**

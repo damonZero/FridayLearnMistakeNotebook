@@ -1,5 +1,6 @@
 package com.friday.mistakenotebook.ui.review
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -24,6 +25,13 @@ fun ReviewScreen(
     viewModel: ReviewViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var showExitDialog by remember { mutableStateOf(false) }
+
+    // 会话进行中且未完成时，拦截系统返回键
+    val inSession = !uiState.isLoading && !uiState.isCompleted && uiState.questions.isNotEmpty()
+    BackHandler(enabled = inSession) {
+        showExitDialog = true
+    }
 
     Scaffold(
         topBar = {
@@ -70,6 +78,29 @@ fun ReviewScreen(
             }
         }
     }
+
+    if (showExitDialog && inSession) {
+        AlertDialog(
+            onDismissRequest = { showExitDialog = false },
+            title = { Text("退出复习？") },
+            text = { Text("已作答的题目已保存，退出将结束本次复习。") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showExitDialog = false
+                        navController.popBackStack()
+                    }
+                ) {
+                    Text("退出")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExitDialog = false }) {
+                    Text("继续复习")
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -101,79 +132,87 @@ fun ReviewContent(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        // 内容区域可滚动：长题目不被裁切，底部按钮永远可达
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
         ) {
-            Column(
-                modifier = Modifier.padding(20.dp)
-            ) {
-                Text(
-                    text = "题目",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = question.content,
-                    fontSize = 18.sp,
-                    lineHeight = 28.sp
-                )
-
-                if (question.userAnswer.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "我的答案",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = NeedReviewRed
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = question.userAnswer,
-                        fontSize = 16.sp,
-                        color = NeedReviewRed
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        if (uiState.isAnswerShown) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MasteredGreen.copy(alpha = 0.1f))
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 Column(
                     modifier = Modifier.padding(20.dp)
                 ) {
                     Text(
-                        text = "正确答案",
+                        text = "题目",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = MasteredGreen
+                        color = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = question.answer.ifBlank { "暂无答案" },
-                        fontSize = 16.sp,
-                        lineHeight = 24.sp
+                        text = question.content,
+                        fontSize = 18.sp,
+                        lineHeight = 28.sp
                     )
+
+                    if (question.userAnswer.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "我的答案",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = NeedReviewRed
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = question.userAnswer,
+                            fontSize = 16.sp,
+                            color = NeedReviewRed
+                        )
+                    }
                 }
             }
-        } else {
-            Button(
-                onClick = onShowAnswer,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = Secondary)
-            ) {
-                Text("显示答案", fontSize = 16.sp)
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (uiState.isAnswerShown) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MasteredGreen.copy(alpha = 0.1f))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp)
+                    ) {
+                        Text(
+                            text = "正确答案",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MasteredGreen
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = question.answer.ifBlank { "暂无答案" },
+                            fontSize = 16.sp,
+                            lineHeight = 24.sp
+                        )
+                    }
+                }
+            } else {
+                Button(
+                    onClick = onShowAnswer,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Secondary)
+                ) {
+                    Text("显示答案", fontSize = 16.sp)
+                }
             }
         }
 
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(16.dp))
 
         if (uiState.isAnswerShown) {
             Row(
@@ -183,6 +222,7 @@ fun ReviewContent(
                 Button(
                     onClick = onIncorrect,
                     modifier = Modifier.weight(1f),
+                    enabled = !uiState.isSubmitting,
                     colors = ButtonDefaults.buttonColors(containerColor = NeedReviewRed)
                 ) {
                     Icon(Icons.Default.Close, contentDescription = null)
@@ -192,6 +232,7 @@ fun ReviewContent(
                 Button(
                     onClick = onCorrect,
                     modifier = Modifier.weight(1f),
+                    enabled = !uiState.isSubmitting,
                     colors = ButtonDefaults.buttonColors(containerColor = MasteredGreen)
                 ) {
                     Icon(Icons.Default.Check, contentDescription = null)
@@ -219,7 +260,7 @@ fun EmptyReviewContent(
         Text(text = "🎉", fontSize = 64.sp)
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "暂无待复习题目",
+            text = "今天没有需要复习的题目",
             fontSize = 20.sp,
             fontWeight = FontWeight.SemiBold
         )

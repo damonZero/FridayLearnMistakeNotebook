@@ -14,7 +14,11 @@ data class ReviewUiState(
     val questions: List<Question> = emptyList(),
     val currentIndex: Int = 0,
     val isAnswerShown: Boolean = false,
+    // 答完全部题目（会话内推进到末尾）
     val isCompleted: Boolean = false,
+    // 正在提交答案（防双击重复计数）
+    val isSubmitting: Boolean = false,
+    // 正在做一次性快照加载
     val isLoading: Boolean = true
 )
 
@@ -32,14 +36,17 @@ class ReviewViewModel @Inject constructor(
 
     private fun loadReviewQuestions() {
         viewModelScope.launch {
-            questionRepository.getQuestionsForReview().collect { questions ->
-                _uiState.update {
-                    it.copy(
-                        questions = questions,
-                        isLoading = false,
-                        isCompleted = questions.isEmpty()
-                    )
-                }
+            // 进入会话时对题目列表做一次性快照，之后不再由数据库重发驱动列表，
+            // 避免答题落库导致列表变短与手动推进 index 互相踩踏（崩溃/跳题）
+            val questions = questionRepository.getQuestionsForReview().first()
+            _uiState.update {
+                it.copy(
+                    questions = questions,
+                    isLoading = false,
+                    // 快照为空属于 loadedEmpty，由 questions.isEmpty() 分支呈现；
+                    // isCompleted 只表示“答完全部”，两者必须区分
+                    isCompleted = false
+                )
             }
         }
     }
@@ -49,26 +56,28 @@ class ReviewViewModel @Inject constructor(
     }
 
     fun markCorrect() {
-        val state = _uiState.value
-        val question = state.questions.getOrNull(state.currentIndex) ?: return
-
-        viewModelScope.launch {
-            questionRepository.processReviewResult(
-                ReviewResult(questionId = question.id, isCorrect = true, score = 5)
-            )
-            moveToNext()
-        }
+        submitResult(isCorrect = true, score = 5)
     }
 
     fun markIncorrect() {
+        submitResult(isCorrect = false, score = 2)
+    }
+
+    private fun submitResult(isCorrect: Boolean, score: Int) {
         val state = _uiState.value
+        if (state.isSubmitting || state.isCompleted) return
         val question = state.questions.getOrNull(state.currentIndex) ?: return
 
+        _uiState.update { it.copy(isSubmitting = true) }
         viewModelScope.launch {
-            questionRepository.processReviewResult(
-                ReviewResult(questionId = question.id, isCorrect = false, score = 2)
-            )
-            moveToNext()
+            try {
+                questionRepository.processReviewResult(
+                    ReviewResult(questionId = question.id, isCorrect = isCorrect, score = score)
+                )
+            } finally {
+                moveToNext()
+                _uiState.update { it.copy(isSubmitting = false) }
+            }
         }
     }
 
