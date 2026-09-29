@@ -29,16 +29,20 @@ fun BackupScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
+    // 待二次确认导入的文件
+    var pendingImportUri by remember { mutableStateOf<Uri?>(null) }
+
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri: Uri? ->
-        // TODO: 实现导出到指定位置
+        uri?.let { viewModel.exportToUri(it) }
     }
 
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let { viewModel.importBackup(it) }
+        // 选完文件先二次确认，再执行导入
+        pendingImportUri = uri
     }
 
     // 显示消息
@@ -47,6 +51,32 @@ fun BackupScreen(
             kotlinx.coroutines.delay(3000)
             viewModel.clearMessage()
         }
+    }
+
+    // 导入二次确认
+    pendingImportUri?.let { importUri ->
+        AlertDialog(
+            onDismissRequest = { pendingImportUri = null },
+            title = { Text("确认导入") },
+            text = {
+                Text("导入将按备份内容合并覆盖现有数据（同 ID 记录会被备份覆盖），确定继续？")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingImportUri = null
+                        viewModel.importBackup(importUri)
+                    }
+                ) {
+                    Text("确定")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingImportUri = null }) {
+                    Text("取消")
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -78,7 +108,7 @@ fun BackupScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Button(
-                    onClick = { viewModel.exportBackup() },
+                    onClick = { exportLauncher.launch(createSuggestedBackupFileName()) },
                     modifier = Modifier.weight(1f),
                     enabled = !uiState.isLoading
                 ) {
@@ -150,7 +180,15 @@ fun BackupScreen(
                     modifier = Modifier.fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator()
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator()
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "正在处理，请稍候…",
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                    }
                 }
             } else if (uiState.backupFiles.isEmpty()) {
                 Box(
@@ -181,6 +219,14 @@ fun BackupScreen(
             }
         }
     }
+}
+
+/**
+ * 生成导出的建议文件名
+ */
+private fun createSuggestedBackupFileName(): String {
+    val dateFormat = SimpleDateFormat("yyyyMMdd_HHmm", Locale.getDefault())
+    return "周周错题本备份_${dateFormat.format(Date())}.json"
 }
 
 @Composable

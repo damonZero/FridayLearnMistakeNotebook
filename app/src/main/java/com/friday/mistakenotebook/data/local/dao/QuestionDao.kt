@@ -4,6 +4,12 @@ import androidx.room.*
 import com.friday.mistakenotebook.data.local.entity.QuestionEntity
 import kotlinx.coroutines.flow.Flow
 
+/** 莱特纳盒子分布统计行 */
+data class BoxCount(
+    val leitnerBox: Int,
+    val count: Int
+)
+
 @Dao
 interface QuestionDao {
 
@@ -19,20 +25,25 @@ interface QuestionDao {
     @Query("SELECT * FROM questions WHERE id = :id")
     suspend fun getQuestionById(id: Long): QuestionEntity?
 
-    @Query("SELECT * FROM questions WHERE nextReviewDate <= :currentTime ORDER BY nextReviewDate ASC")
-    fun getQuestionsForReview(currentTime: Long): Flow<List<QuestionEntity>>
+    // dueUntil 语义：当天到期即算待复习，传"明天 0 点"的时间戳
+    @Query("SELECT * FROM questions WHERE nextReviewDate <= :dueUntil ORDER BY nextReviewDate ASC")
+    fun getQuestionsForReview(dueUntil: Long): Flow<List<QuestionEntity>>
 
-    @Query("SELECT * FROM questions WHERE nextReviewDate <= :currentTime AND subjectId = :subjectId ORDER BY nextReviewDate ASC")
-    fun getQuestionsForReviewBySubject(currentTime: Long, subjectId: Long): Flow<List<QuestionEntity>>
+    @Query("SELECT * FROM questions WHERE nextReviewDate <= :dueUntil AND subjectId = :subjectId ORDER BY nextReviewDate ASC")
+    fun getQuestionsForReviewBySubject(dueUntil: Long, subjectId: Long): Flow<List<QuestionEntity>>
 
     @Query("SELECT COUNT(*) FROM questions")
     fun getTotalQuestionCount(): Flow<Int>
 
-    @Query("SELECT COUNT(*) FROM questions WHERE nextReviewDate <= :currentTime")
-    fun getTodayReviewCount(currentTime: Long): Flow<Int>
+    @Query("SELECT COUNT(*) FROM questions WHERE nextReviewDate <= :dueUntil")
+    fun getTodayReviewCount(dueUntil: Long): Flow<Int>
 
-    @Query("SELECT COUNT(*) FROM questions WHERE leitnerBox >= 4")
+    // 已掌握 = 莱特纳盒 5（需求 §5.2），与统计页分布口径一致
+    @Query("SELECT COUNT(*) FROM questions WHERE leitnerBox = 5")
     fun getMasteredCount(): Flow<Int>
+
+    @Query("SELECT leitnerBox, COUNT(*) AS count FROM questions GROUP BY leitnerBox")
+    fun getBoxCounts(): Flow<List<BoxCount>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertQuestion(question: QuestionEntity): Long

@@ -19,6 +19,9 @@ interface QuestionRepository {
 
     fun getMasteredCount(): Flow<Int>
 
+    /** 莱特纳盒子分布：key=盒子 1..5，value=题目数（统计页真实分布用） */
+    fun getBoxCounts(): Flow<Map<Int, Int>>
+
     suspend fun getQuestionById(id: Long): Question?
 
     suspend fun addQuestion(

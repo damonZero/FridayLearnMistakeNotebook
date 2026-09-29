@@ -23,7 +23,7 @@ object DatabaseModule {
             MistakeNotebookDatabase::class.java,
             MistakeNotebookDatabase.DATABASE_NAME
         )
-            .fallbackToDestructiveMigration()
+            // 禁止静默清库：schema 升级必须显式提供 Migration
             .build()
     }
 

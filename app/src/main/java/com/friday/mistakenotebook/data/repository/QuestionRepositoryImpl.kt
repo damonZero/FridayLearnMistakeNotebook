@@ -7,15 +7,38 @@ import com.friday.mistakenotebook.domain.algorithm.SpacedRepetitionAlgorithm
 import com.friday.mistakenotebook.domain.model.Question
 import com.friday.mistakenotebook.domain.model.ReviewResult
 import com.friday.mistakenotebook.domain.repository.QuestionRepository
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
 class QuestionRepositoryImpl @Inject constructor(
     private val questionDao: QuestionDao
 ) : QuestionRepository {
+
+    /**
+     * 待复习相关查询的时间源：每分钟重发一次"明天 0 点"的截止时间。
+     * 否则查询参数在订阅时固化，跨午夜后统计陈旧、当天新录入的错题也不出现。
+     */
+    private val dueClock = flow {
+        while (true) {
+            emit(endOfToday())
+            delay(60_000)
+        }
+    }
+
+    private fun endOfToday(): Long =
+        LocalDate.now().plusDays(1)
+            .atStartOfDay(ZoneId.systemDefault())
+            .toInstant().toEpochMilli()
 
     override fun getAllQuestions(): Flow<List<Question>> {
         return questionDao.getAllQuestions().map { entities ->
@@ -30,15 +53,23 @@ class QuestionRepositoryImpl @Inject constructor(
     }
 
     override fun getQuestionsForReview(): Flow<List<Question>> {
-        val currentTime = System.currentTimeMillis()
-        return questionDao.getQuestionsForReview(currentTime).map { entities ->
-            entities.map { it.toDomain() }
+        return dueClock.flatMapLatest { dueUntil ->
+            questionDao.getQuestionsForReview(dueUntil).map { entities ->
+                entities.map { it.toDomain() }
+            }
         }
     }
 
     override fun getTodayReviewCount(): Flow<Int> {
-        val currentTime = System.currentTimeMillis()
-        return questionDao.getTodayReviewCount(currentTime)
+        return dueClock.flatMapLatest { dueUntil ->
+            questionDao.getTodayReviewCount(dueUntil)
+        }
+    }
+
+    override fun getBoxCounts(): Flow<Map<Int, Int>> {
+        return questionDao.getBoxCounts().map { rows ->
+            rows.associate { it.leitnerBox to it.count }
+        }
     }
 
     override fun getTotalQuestionCount(): Flow<Int> {

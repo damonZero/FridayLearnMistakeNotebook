@@ -105,6 +105,7 @@ class FakeQuestionRepository : QuestionRepository {
     override fun getTodayReviewCount(): kotlinx.coroutines.flow.Flow<Int> = kotlinx.coroutines.flow.flowOf(0)
     override fun getTotalQuestionCount(): kotlinx.coroutines.flow.Flow<Int> = kotlinx.coroutines.flow.flowOf(0)
     override fun getMasteredCount(): kotlinx.coroutines.flow.Flow<Int> = kotlinx.coroutines.flow.flowOf(0)
+    override fun getBoxCounts(): kotlinx.coroutines.flow.Flow<Map<Int, Int>> = kotlinx.coroutines.flow.flowOf(emptyMap())
     override suspend fun getQuestionById(id: Long): com.friday.mistakenotebook.domain.model.Question? = null
     override suspend fun updateQuestion(question: com.friday.mistakenotebook.domain.model.Question) {}
     override suspend fun deleteQuestion(id: Long) {}
