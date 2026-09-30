@@ -169,9 +169,9 @@
 
 | 任务 | 推荐模型 | 备选模型 | 说明 |
 |------|----------|----------|------|
-| **OCR 识别** | DeepSeek deepseek-v4-flash-vision-exp | 火山方舟 (豆包 Vision)、GPT-4 Vision | 2026-09-30 起默认全切 DeepSeek（官网一个 Key 全搞定），实验版模型，手写/公式准确率需实际观察，不理想时 OCR 切回豆包 |
-| **错题分析** | DeepSeek deepseek-v4-flash | Claude、GPT-4 | 同一 Key，性价比高 |
-| **生成相似题** | DeepSeek deepseek-v4-flash | Claude、GPT-4 | 同上 |
+| **OCR 识别** | DeepSeek deepseek-flash | 火山方舟 (豆包 Vision)、GPT-4 Vision | 2026-09-30 起默认全切 DeepSeek；V4.1 Flash 原生多模态；手写/公式准确率需实际观察，不理想时 OCR 切回豆包 |
+| **错题分析** | DeepSeek deepseek-flash | Claude、GPT-4 | 同一模型同一 Key |
+| **生成相似题** | DeepSeek deepseek-flash | Claude、GPT-4 | 同上 |
 | **复习排期** | 本地算法 | — | 艾宾浩斯+莱特纳，不需要 AI |
 
 ### 3.2 Token 价格参考
@@ -180,7 +180,7 @@
 
 | 模型 | 输入价格 (/百万 tokens) | 输出价格 (/百万 tokens) |
 |------|----------|----------|
-| DeepSeek V4-Flash（含 vision-exp） | ¥1 | ¥4 |
+| DeepSeek Flash（V4.1，闲时；高峰 ×2） | ¥1 | ¥4 |
 | 火山方舟 (豆包 Vision) | ¥8 | ¥20 |
 | GPT-4o | ¥0.04 /1k | ¥0.12 /1k |
 | GPT-4 | ¥0.2 /1k | ¥0.6 /1k |

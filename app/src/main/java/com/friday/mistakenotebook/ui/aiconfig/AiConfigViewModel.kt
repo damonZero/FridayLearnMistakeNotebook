@@ -247,15 +247,16 @@ class AiConfigViewModel @Inject constructor(
     companion object {
         /**
          * 2026-09-30 起默认供应商切为 DeepSeek：
-         * 识图用 deepseek-v4-flash-vision-exp（实验版视觉模型，价格约为豆包的 1/10），
-         * 推理/出题用 deepseek-v4-flash；火山方舟保留为备选模板
+         * V4.1 Flash 原生多模态，识图/推理统一用 deepseek-flash
+         * （官方版本别名，自动指向最新 Flash，旧名 deepseek-v4-flash[-vision-exp] 已下线兼容路由）；
+         * 火山方舟保留为备选模板
          */
         val providerTemplates = listOf(
             ProviderTemplate(
                 name = "DeepSeek",
                 baseUrl = "https://api.deepseek.com",
-                visionModel = "deepseek-v4-flash-vision-exp",
-                textModel = "deepseek-v4-flash"
+                visionModel = "deepseek-flash",
+                textModel = "deepseek-flash"
             ),
             ProviderTemplate(
                 name = "火山方舟",

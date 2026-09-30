@@ -60,7 +60,7 @@ class AiUsageLogger @Inject constructor(private val aiUsageLogDao: AiUsageLogDao
      * 按供应商优先计价（供应商托管的模型名可能与别家撞名，如火山托管的 deepseek），
      * 自定义供应商退回模型名匹配；无法识别不计费。
      * 单价为各官方每 100 万 tokens 定价：
-     * DeepSeek V4-Flash（含 vision-exp，2026-09-10 起空闲时段）：输入 ¥1/M、输出 ¥4/M（高峰 ×2，此处按空闲估）
+     * DeepSeek Flash（V4.1，2026-09-10 起闲时）：输入 ¥1/M、输出 ¥4/M（高峰 ×2，此处按闲时估）
      * 豆包(火山方舟)：输入 ¥8/M、输出 ¥20/M
      */
     private fun estimateCost(
