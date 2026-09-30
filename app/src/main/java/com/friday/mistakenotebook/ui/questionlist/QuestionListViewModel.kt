@@ -2,6 +2,7 @@ package com.friday.mistakenotebook.ui.questionlist
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.friday.mistakenotebook.data.local.entity.ErrorType
 import com.friday.mistakenotebook.domain.model.Question
 import com.friday.mistakenotebook.domain.model.Subject
 import com.friday.mistakenotebook.domain.repository.QuestionRepository
@@ -15,14 +16,41 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
+
+/** 列表排序方式 */
+enum class QuestionSort(val label: String) {
+    NEWEST("最新"),
+    OLDEST("最早"),
+    DUE_FIRST("待复习优先")
+}
+
+/** 列表分组方式 */
+enum class QuestionGroup(val label: String) {
+    NONE("不分组"),
+    BY_STATUS("按掌握状态"),
+    BY_ERROR_TYPE("按错误类型"),
+    BY_DATE("按录入日期")
+}
+
+/** 分组后的一个段落（title 为空表示不分组渲染） */
+data class QuestionSection(
+    val title: String,
+    val questions: List<Question>
+)
 
 data class QuestionListUiState(
     val questions: List<Question> = emptyList(),
+    val sections: List<QuestionSection> = emptyList(),
     val subjects: List<Subject> = emptyList(),
     val isLoading: Boolean = true,
     val searchQuery: String = "",
-    val selectedSubjectId: Long? = null
+    val selectedSubjectId: Long? = null,
+    val sortMode: QuestionSort = QuestionSort.NEWEST,
+    val groupMode: QuestionGroup = QuestionGroup.NONE
 )
 
 @HiltViewModel
@@ -77,6 +105,16 @@ class QuestionListViewModel @Inject constructor(
         filterQuestions()
     }
 
+    fun setSortMode(mode: QuestionSort) {
+        _uiState.update { it.copy(sortMode = mode) }
+        filterQuestions()
+    }
+
+    fun setGroupMode(mode: QuestionGroup) {
+        _uiState.update { it.copy(groupMode = mode) }
+        filterQuestions()
+    }
+
     fun clearFilters() {
         searchDebounceJob?.cancel()
         _uiState.update { it.copy(searchQuery = "", selectedSubjectId = null) }
@@ -92,8 +130,50 @@ class QuestionListViewModel @Inject constructor(
                 question.content.contains(state.searchQuery, ignoreCase = true) ||
                 question.answer.contains(state.searchQuery, ignoreCase = true)
             matchesSubject && matchesSearch
+        }.let { list ->
+            when (state.sortMode) {
+                QuestionSort.NEWEST -> list.sortedByDescending { it.createdAt }
+                QuestionSort.OLDEST -> list.sortedBy { it.createdAt }
+                // 越紧急（nextReviewDate 越早）越靠前
+                QuestionSort.DUE_FIRST -> list.sortedBy { it.nextReviewDate }
+            }
         }
-        _uiState.update { it.copy(questions = filtered, isLoading = false) }
+        val sections = buildSections(filtered, state.groupMode)
+        _uiState.update { it.copy(questions = filtered, sections = sections, isLoading = false) }
+    }
+
+    private fun buildSections(list: List<Question>, mode: QuestionGroup): List<QuestionSection> {
+        return when (mode) {
+            QuestionGroup.NONE -> listOf(QuestionSection("", list))
+            QuestionGroup.BY_STATUS -> listOf(
+                "🔴 待巩固（盒1）" to list.filter { it.leitnerBox <= 1 },
+                "🟡 学习中（盒2-4）" to list.filter { it.leitnerBox in 2..4 },
+                "🟢 已掌握（盒5）" to list.filter { it.leitnerBox >= 5 }
+            ).filter { it.second.isNotEmpty() }.map { QuestionSection(it.first, it.second) }
+            QuestionGroup.BY_ERROR_TYPE -> ErrorType.entries.mapNotNull { type ->
+                val group = list.filter { it.errorType == type }
+                if (group.isEmpty()) {
+                    null
+                } else {
+                    QuestionSection(ERROR_TYPE_LABELS[type] ?: "未知", group)
+                }
+            }
+            // groupBy 保留首次出现顺序，与当前排序一致：日期自然从新到旧
+            QuestionGroup.BY_DATE -> list.groupBy { dateLabel(it.createdAt) }
+                .map { QuestionSection(it.key, it.value) }
+        }
+    }
+
+    private fun dateLabel(timestamp: Long): String {
+        val date = Instant.ofEpochMilli(timestamp)
+            .atZone(ZoneId.systemDefault()).toLocalDate()
+        val today = LocalDate.now()
+        return when {
+            date == today -> "今天"
+            date == today.minusDays(1) -> "昨天"
+            date.isAfter(today.minusDays(7)) -> "近 7 天"
+            else -> "${date.year}年${date.monthValue}月${date.dayOfMonth}日"
+        }
     }
 
     fun deleteQuestion(id: Long) {
@@ -104,5 +184,13 @@ class QuestionListViewModel @Inject constructor(
 
     companion object {
         private const val SEARCH_DEBOUNCE_MILLIS = 300L
+
+        private val ERROR_TYPE_LABELS = mapOf(
+            ErrorType.UNKNOWN to "未知",
+            ErrorType.CARELESS to "粗心",
+            ErrorType.CONCEPTUAL to "概念错误",
+            ErrorType.METHOD to "方法错误",
+            ErrorType.CALCULATION to "计算错误"
+        )
     }
 }

@@ -1,10 +1,12 @@
 package com.friday.mistakenotebook.ui.questionlist
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -94,6 +96,50 @@ fun QuestionListScreen(
                 }
             }
 
+            // 排序与分组：一行横向可滑，标签短、触控友好
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "排序",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                )
+                QuestionSort.entries.forEach { mode ->
+                    FilterChip(
+                        selected = uiState.sortMode == mode,
+                        onClick = { viewModel.setSortMode(mode) },
+                        label = { Text(mode.label, fontSize = 12.sp) }
+                    )
+                }
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "分组",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                )
+                QuestionGroup.entries.forEach { mode ->
+                    FilterChip(
+                        selected = uiState.groupMode == mode,
+                        onClick = { viewModel.setGroupMode(mode) },
+                        label = { Text(mode.label, fontSize = 12.sp) }
+                    )
+                }
+            }
+
             OutlinedTextField(
                 value = uiState.searchQuery,
                 onValueChange = { viewModel.updateSearchQuery(it) },
@@ -131,14 +177,29 @@ fun QuestionListScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(uiState.questions) { question ->
-                        QuestionCard(
-                            question = question,
-                            onClick = {
-                                navController.navigate(Screen.QuestionDetail.createRoute(question.id))
-                            },
-                            onDelete = { viewModel.deleteQuestion(question.id) }
-                        )
+                    uiState.sections.forEach { section ->
+                        if (section.title.isNotBlank()) {
+                            item(key = "header_${section.title}") {
+                                Text(
+                                    text = "${section.title} · ${section.questions.size} 题",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                        items(
+                            section.questions,
+                            key = { "q_${section.title}_${it.id}" }
+                        ) { question ->
+                            QuestionCard(
+                                question = question,
+                                onClick = {
+                                    navController.navigate(Screen.QuestionDetail.createRoute(question.id))
+                                },
+                                onDelete = { viewModel.deleteQuestion(question.id) }
+                            )
+                        }
                     }
                 }
             }
