@@ -1,5 +1,6 @@
 package com.friday.mistakenotebook.data.remote
 
+import android.util.Log
 import com.friday.mistakenotebook.data.local.dao.AiConfigDao
 import com.friday.mistakenotebook.data.local.entity.AiTaskType
 import com.google.gson.JsonArray
@@ -18,6 +19,8 @@ import java.net.UnknownHostException
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+
+private const val TAG = "AI_CHAT"
 
 /**
  * 知识点分析结果
@@ -86,6 +89,8 @@ class AiChatService @Inject constructor(
     private val usageLogger: AiUsageLogger
 ) {
 
+    private val gson = com.google.gson.Gson()
+
     private val client = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(120, TimeUnit.SECONDS)
@@ -137,7 +142,8 @@ class AiChatService @Inject constructor(
         taskType: AiTaskType,
         userPrompt: String,
         maxTokens: Int,
-        imageBase64: String?
+        imageBase64: String?,
+        jsonMode: Boolean = false
     ): Result<String> {
         return try {
             val jsonBody = JsonObject().apply {
@@ -183,6 +189,10 @@ class AiChatService @Inject constructor(
                     }
                 )
                 addProperty("max_tokens", maxTokens)
+                if (jsonMode) {
+                    // JSON 模式：端点不支持时 HTTP 4xx，由调用方退回普通模式
+                    add("response_format", JsonObject().apply { addProperty("type", "json_object") })
+                }
             }
 
             val request = Request.Builder()
@@ -252,6 +262,99 @@ class AiChatService @Inject constructor(
     }
 
     /**
+     * 结构化生成管线（所有 JSON 型 AI 调用的统一入口），四层保障：
+     * ① 常规请求；② 解析失败 → 附加纠错指令 + response_format=json_object 重试
+     *    （端点不支持 JSON 模式自动退普通模式）；③ 宽松解析（剥代码块/截取括号）；
+     * ④ 正则逐字段兜底恢复。网络/配置类错误不浪费重试。
+     */
+    private suspend fun <T> generateParsed(
+        taskType: AiTaskType,
+        prompt: String,
+        maxTokens: Int,
+        imageBase64: String? = null,
+        parse: (String) -> T?,
+        failureMsg: String
+    ): Result<T> = withContext(Dispatchers.IO) {
+        val config = resolveConfig(taskType)
+            ?: return@withContext Result.failure(IllegalStateException("请先在设置中配置该任务的 AI 模型"))
+
+        // 第一层：常规请求
+        val first = chatInternal(config, taskType, prompt, maxTokens, imageBase64, jsonMode = false)
+        first.getOrNull()?.let { raw ->
+            parse(raw)?.let { return@withContext Result.success(it) }
+        }
+
+        // 只有"拿到内容但解析失败"或"正文为空"才值得换格式重试；网络/配置错误直接返回
+        val failure = first.exceptionOrNull()
+        val worthRetry = first.getOrNull() != null || (
+            failure is IOException &&
+                (failure.message?.contains("格式异常") == true ||
+                    failure.message?.contains("未找到回复") == true)
+            )
+        if (!worthRetry) {
+            return@withContext Result.failure(
+                first.exceptionOrNull() ?: IllegalStateException(failureMsg)
+            )
+        }
+
+        Log.w(TAG, "JSON 第一次解析失败，启用严格 JSON 模式重试")
+        // 第二层：附加纠错指令，优先 JSON 模式（端点不支持则退普通模式）
+        val strictPrompt = prompt + "\n\n注意：上一次的输出无法解析。请重新回答，并且只输出一个合法 JSON：不要代码块标记、不要解释文字、字符串内部不要出现未转义的换行符。"
+        val strict = chatInternal(config, taskType, strictPrompt, maxTokens, imageBase64, jsonMode = true)
+        val strictBody = strict.getOrNull() ?: run {
+            chatInternal(config, taskType, strictPrompt, maxTokens, imageBase64, jsonMode = false)
+                .getOrNull()
+        }
+        strictBody?.let { raw ->
+            parse(raw)?.let { return@withContext Result.success(it) }
+        }
+
+        Result.failure(IllegalStateException(failureMsg))
+    }
+
+    /** 从原始文本中平衡扫描提取所有顶层 {...} 对象（容忍个别对象损坏） */
+    private fun extractJsonObjects(raw: String): List<String> {
+        val out = mutableListOf<String>()
+        var depth = 0
+        var start = -1
+        var inStr = false
+        var esc = false
+        raw.forEachIndexed { i, ch ->
+            if (esc) {
+                esc = false
+                return@forEachIndexed
+            }
+            when {
+                ch == '\\' && inStr -> esc = true
+                ch == '"' -> inStr = !inStr
+                ch == '{' && !inStr -> {
+                    if (depth == 0) start = i
+                    depth++
+                }
+                ch == '}' && !inStr -> {
+                    depth--
+                    if (depth == 0 && start >= 0) {
+                        out.add(raw.substring(start, i + 1))
+                        start = -1
+                    }
+                }
+            }
+        }
+        return out
+    }
+
+    /** 字段级正则兜底：匹配字符串值（可跨未转义换行）并反转义 */
+    private fun regexField(raw: String, field: String): String? {
+        val m = Regex("\"$field\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"").find(raw) ?: return null
+        val captured = m.groupValues[1]
+        return try {
+            gson.fromJson("\"$captured\"", String::class.java)
+        } catch (e: Exception) {
+            captured
+        }
+    }
+
+    /**
      * AI 知识点分析：分析题目涉及的知识点、猜测错因并给出讲解
      */
     suspend fun analyzeKnowledge(
@@ -272,12 +375,16 @@ class AiChatService @Inject constructor(
             appendLine()
             appendLine("请只输出一个 JSON 对象，不要输出任何其他文字或代码块标记，格式如下：")
             appendLine("""{"knowledgePoints": ["知识点1", "知识点2"], "errorTypeGuess": "错误原因的简短描述", "analysis": "详细分析：涉及的知识点、错因、正确解法"}""")
+            appendLine("如果原题包含多个小问，analysis 请按小问分别展开。")
         }
 
-        return chat(AiTaskType.ANALYSIS, prompt, maxTokens = 8192).mapCatching { content ->
-            parseKnowledgeAnalysis(content)
-                ?: throw IllegalStateException("AI 返回的分析内容无法解析，请重试")
-        }
+        return generateParsed(
+            taskType = AiTaskType.ANALYSIS,
+            prompt = prompt,
+            maxTokens = 8192,
+            parse = { parseKnowledgeAnalysis(it) },
+            failureMsg = "AI 返回的分析内容无法解析，请重试"
+        )
     }
 
     /**
@@ -312,10 +419,13 @@ class AiChatService @Inject constructor(
         }
 
         // 思考型模型推理消耗大，多小问长题干的输出也长，预算放宽到 8192
-        return chat(AiTaskType.SIMILAR_QUESTION, prompt, maxTokens = 8192).mapCatching { content ->
-            parseGeneratedQuestions(content)
-                ?: throw IllegalStateException("AI 返回的相似题内容无法解析，请重试")
-        }
+        return generateParsed(
+            taskType = AiTaskType.SIMILAR_QUESTION,
+            prompt = prompt,
+            maxTokens = 8192,
+            parse = { parseGeneratedQuestions(it) },
+            failureMsg = "AI 返回的相似题内容无法解析，请重试"
+        )
     }
 
     /**
@@ -339,31 +449,47 @@ class AiChatService @Inject constructor(
             appendLine("""{"content": "题目内容", "userAnswer": "学生的答案，没有则留空", "answer": "正确答案与多种解法思路", "knowledgePoint": "核心知识点短语"}""")
         }
         // 思考型模型推理消耗大，多小问长题干的 JSON 输出也长，预算放宽到 8192
-        return chatWithImage(AiTaskType.OCR, imageBase64, prompt, maxTokens = 8192).mapCatching { content ->
-            parseQuestionExtraction(content)
-                ?: throw IllegalStateException("AI 返回的识题内容无法解析，请重试")
-        }
+        return generateParsed(
+            taskType = AiTaskType.OCR,
+            prompt = prompt,
+            maxTokens = 8192,
+            imageBase64 = imageBase64,
+            parse = { parseQuestionExtraction(it) },
+            failureMsg = "AI 返回的识题内容无法解析，请重试"
+        )
     }
 
-    /** 解析识题 JSON（容错：剥代码块、截取首尾大括号之间内容） */
+    /** 宽松解析首尾大括号之间的 JSON 对象 */
+    private fun parseJsonObject(raw: String): com.google.gson.JsonObject? = try {
+        extractBetween(raw, '{', '}')?.let { JsonParser.parseString(it).asJsonObject }
+    } catch (e: Exception) {
+        null
+    }
+
+    /** 解析识题 JSON：宽松 JSON 优先，失败退正则逐字段兜底 */
     private fun parseQuestionExtraction(content: String): QuestionExtraction? {
-        val json = extractBetween(content, '{', '}') ?: return null
-        return try {
-            val obj = JsonParser.parseString(json).asJsonObject
+        parseJsonObject(content)?.let { obj ->
             fun read(name: String): String =
                 obj.get(name)?.takeIf { it.isJsonPrimitive }?.asString?.trim().orEmpty()
             val questionContent = read("content")
-            if (questionContent.isBlank()) null else {
-                QuestionExtraction(
+            if (questionContent.isNotBlank()) {
+                return QuestionExtraction(
                     content = questionContent,
                     userAnswer = read("userAnswer"),
                     answer = read("answer"),
                     knowledgePoint = read("knowledgePoint")
                 )
             }
-        } catch (e: Exception) {
-            null
         }
+        // 正则兜底：字符串内有未转义换行等非法 JSON 时仍能恢复
+        val contentField = regexField(content, "content")?.trim().takeIf { !it.isNullOrBlank() }
+            ?: return null
+        return QuestionExtraction(
+            content = contentField,
+            userAnswer = regexField(content, "userAnswer").orEmpty(),
+            answer = regexField(content, "answer").orEmpty(),
+            knowledgePoint = regexField(content, "knowledgePoint").orEmpty()
+        )
     }
 
     /**
@@ -399,13 +525,9 @@ class AiChatService @Inject constructor(
         }
     }
 
-    /**
-     * 解析知识点分析 JSON（容错：剥掉代码块标记、截取首尾大括号之间的内容）
-     */
+    /** 解析知识点分析：宽松 JSON 优先，失败退正则兜底 */
     private fun parseKnowledgeAnalysis(content: String): KnowledgeAnalysis? {
-        val json = extractBetween(content, '{', '}') ?: return null
-        return try {
-            val obj = JsonParser.parseString(json).asJsonObject
+        parseJsonObject(content)?.let { obj ->
             val knowledgePoints = obj.getAsJsonArray("knowledgePoints")
                 ?.mapNotNull { element ->
                     if (element.isJsonPrimitive) element.asString.trim().takeIf { it.isNotBlank() } else null
@@ -415,19 +537,23 @@ class AiChatService @Inject constructor(
                 ?.takeIf { it.isJsonPrimitive }?.asString?.trim().orEmpty()
             val analysis = obj.get("analysis")
                 ?.takeIf { it.isJsonPrimitive }?.asString?.trim().orEmpty()
-
-            if (knowledgePoints.isEmpty() && analysis.isBlank()) {
-                null
-            } else {
-                KnowledgeAnalysis(
-                    knowledgePoints = knowledgePoints,
-                    errorTypeGuess = errorTypeGuess,
-                    analysis = analysis
-                )
+            if (knowledgePoints.isNotEmpty() || analysis.isNotBlank()) {
+                return KnowledgeAnalysis(knowledgePoints, errorTypeGuess, analysis)
             }
-        } catch (e: Exception) {
-            null
         }
+        // 正则兜底
+        val kps = Regex("\"knowledgePoints\"\\s*:\\s*\\[(.*?)]", RegexOption.DOT_MATCHES_ALL)
+            .find(content)?.groupValues?.get(1)
+            ?.let { block -> Regex("\"((?:[^\"\\\\]|\\\\.)*)\"").findAll(block).mapNotNull { m ->
+                runCatching { gson.fromJson("\"${m.groupValues[1]}\"", String::class.java) }.getOrNull()
+            }.filter { it.isNotBlank() }.toList() }
+            .orEmpty()
+        val analysis = regexField(content, "analysis") ?: return null
+        return KnowledgeAnalysis(
+            knowledgePoints = kps,
+            errorTypeGuess = regexField(content, "errorTypeGuess").orEmpty(),
+            analysis = analysis
+        )
     }
 
     /**
@@ -435,43 +561,54 @@ class AiChatService @Inject constructor(
      * 模型误输出对象包裹数组时也兼容）
      */
     private fun parseGeneratedQuestions(content: String): List<GeneratedQuestion>? {
-        return try {
+        val fromJson = try {
             val trimmed = stripCodeFence(content)
             val jsonArrayText = when {
                 trimmed.contains('[') -> extractBetween(trimmed, '[', ']')
                 else -> extractBetween(trimmed, '{', '}')
-            } ?: return null
+            } ?: null
 
-            val root = JsonParser.parseString(jsonArrayText)
+            val root = jsonArrayText?.let { JsonParser.parseString(it) }
             val array = when {
+                root == null -> null
                 root.isJsonArray -> root.asJsonArray
-                root.isJsonObject -> root.asJsonObject.getAsJsonArray("questions") ?: return null
-                else -> return null
+                root.isJsonObject -> root.asJsonObject.getAsJsonArray("questions")
+                else -> null
             }
 
-            val questions = array.mapNotNull { element ->
+            array?.mapNotNull { element ->
                 try {
                     val obj = element.asJsonObject
-                    val questionContent = obj.get("content")
-                        ?.takeIf { it.isJsonPrimitive }?.asString?.trim().orEmpty()
-                    val answer = obj.get("answer")
-                        ?.takeIf { it.isJsonPrimitive }?.asString?.trim().orEmpty()
-                    val variation = obj.get("variation")
-                        ?.takeIf { it.isJsonPrimitive }?.asString?.trim().orEmpty()
-                    if (questionContent.isNotBlank()) {
-                        GeneratedQuestion(content = questionContent, answer = answer, variation = variation)
-                    } else {
-                        null
-                    }
+                    generatedFrom(obj)
                 } catch (e: Exception) {
                     null
                 }
-            }
-
-            questions.takeIf { it.isNotEmpty() }
+            }?.takeIf { it.isNotEmpty() }
         } catch (e: Exception) {
             null
         }
+        if (fromJson != null) return fromJson
+
+        // 兜底：平衡扫描逐对象恢复——数组里混入一个坏对象只影响它自己
+        val recovered = extractJsonObjects(stripCodeFence(content)).mapNotNull { objStr ->
+            try {
+                generatedFrom(JsonParser.parseString(objStr).asJsonObject)
+            } catch (e: Exception) {
+                null
+            }
+        }.filter { it.content.isNotBlank() }
+        return recovered.takeIf { it.isNotEmpty() }
+    }
+
+    private fun generatedFrom(obj: com.google.gson.JsonObject): GeneratedQuestion? {
+        val questionContent = obj.get("content")
+            ?.takeIf { it.isJsonPrimitive }?.asString?.trim().orEmpty()
+        if (questionContent.isBlank()) return null
+        return GeneratedQuestion(
+            content = questionContent,
+            answer = obj.get("answer")?.takeIf { it.isJsonPrimitive }?.asString?.trim().orEmpty(),
+            variation = obj.get("variation")?.takeIf { it.isJsonPrimitive }?.asString?.trim().orEmpty()
+        )
     }
 
     /**
