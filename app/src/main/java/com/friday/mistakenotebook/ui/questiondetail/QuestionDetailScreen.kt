@@ -25,7 +25,7 @@ import com.friday.mistakenotebook.data.remote.KnowledgeAnalysis
 import com.friday.mistakenotebook.domain.algorithm.SpacedRepetitionAlgorithm
 import com.friday.mistakenotebook.print.SheetGenerateState
 import com.friday.mistakenotebook.print.printExerciseSheet
-import com.friday.mistakenotebook.print.sharePracticeSheets
+import com.friday.mistakenotebook.print.shareSheetFile
 import com.friday.mistakenotebook.ui.addquestion.getErrorTypeName
 import com.friday.mistakenotebook.ui.navigation.Screen
 import com.friday.mistakenotebook.ui.theme.*
@@ -160,7 +160,7 @@ fun QuestionDetailScreen(
                 text = {
                     Column {
                         Text(
-                            "已生成练习卷（孩子做）与答案卷（家长留存）两个 PDF。\n可通过微信发送到电脑或打印 APP 打印。",
+                            "已生成练习卷（孩子做）与答案卷（家长留存）两个 PDF。\n分别分享到微信发送电脑/打印 APP 即可打印。",
                             fontSize = 14.sp
                         )
                         st.note?.let {
@@ -171,17 +171,21 @@ fun QuestionDetailScreen(
                 },
                 confirmButton = {
                     TextButton(onClick = {
-                        sharePracticeSheets(sheetContext, st.files)
-                        viewModel.consumeSheetState()
-                    }) { Text("分享 / 发微信") }
+                        shareSheetFile(sheetContext, st.files.exerciseSheet)
+                    }) { Text("发练习卷") }
                 },
                 dismissButton = {
-                    Row {
+                    Column(horizontalAlignment = Alignment.End) {
                         TextButton(onClick = {
-                            printExerciseSheet(sheetContext, st.files.exerciseSheet)
-                            viewModel.consumeSheetState()
-                        }) { Text("直接打印") }
-                        TextButton(onClick = { viewModel.consumeSheetState() }) { Text("完成") }
+                            shareSheetFile(sheetContext, st.files.answerSheet)
+                        }) { Text("发答案卷") }
+                        Row {
+                            TextButton(onClick = {
+                                printExerciseSheet(sheetContext, st.files.exerciseSheet)
+                                viewModel.consumeSheetState()
+                            }) { Text("直接打印") }
+                            TextButton(onClick = { viewModel.consumeSheetState() }) { Text("完成") }
+                        }
                     }
                 }
             )

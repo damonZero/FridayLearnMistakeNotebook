@@ -349,20 +349,20 @@ class PracticeSheetPdfGenerator @Inject constructor(
     }
 }
 
-/** 通过系统分享面板发送两个 PDF（微信 / 打印 APP / 电脑均可接收） */
-fun sharePracticeSheets(context: Context, files: SheetFiles) {
-    val uris = listOf(files.exerciseSheet, files.answerSheet).map {
-        FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", it)
-    }
-    val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+/**
+ * 单文件分享到系统分享面板。
+ * 注意：微信对 SEND_MULTIPLE 只接收图片/视频，PDF 多文件分享面板里不会出现微信；
+ * 单文件 ACTION_SEND 走微信的文件通道，可以正常分享
+ */
+fun shareSheetFile(context: Context, file: File) {
+    val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+    val intent = Intent(Intent.ACTION_SEND).apply {
         type = "application/pdf"
-        putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
-        clipData = android.content.ClipData.newRawUri("sheets", uris[0]).apply {
-            uris.forEach { addItem(android.content.ClipData.Item(it)) }
-        }
+        putExtra(Intent.EXTRA_STREAM, uri)
+        clipData = android.content.ClipData.newRawUri("sheet", uri)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
-    context.startActivity(Intent.createChooser(intent, "分享练习卷"))
+    context.startActivity(Intent.createChooser(intent, "分享「${file.name}」"))
 }
 
 /** 系统打印服务直印练习卷（需已配置打印机） */
