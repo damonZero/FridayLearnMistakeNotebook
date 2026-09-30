@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.friday.mistakenotebook.data.local.entity.ErrorType
 import com.friday.mistakenotebook.data.remote.AiChatService
+import com.friday.mistakenotebook.data.remote.SimilarQuestionCodec
 import com.friday.mistakenotebook.domain.model.Question
 import com.friday.mistakenotebook.domain.model.Subject
 import com.friday.mistakenotebook.domain.repository.QuestionRepository
@@ -250,6 +251,17 @@ class QuestionListViewModel @Inject constructor(
                         aiChatService.generateSimilarQuestions(q.content)
                             .onFailure { failedCount++ }
                             .getOrElse { emptyList() }
+                            .also { list ->
+                                // 逐题落库：下次练习/打印直接复用
+                                if (list.isNotEmpty()) {
+                                    runCatching {
+                                        questionRepository.updateSimilarQuestions(
+                                            q.id,
+                                            SimilarQuestionCodec.encode(list)
+                                        )
+                                    }
+                                }
+                            }
                     } else {
                         emptyList()
                     }

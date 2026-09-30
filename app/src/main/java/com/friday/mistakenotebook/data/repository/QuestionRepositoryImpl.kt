@@ -135,6 +135,10 @@ class QuestionRepositoryImpl @Inject constructor(
         questionDao.updateAnalysis(id, aiAnalysis, knowledgePoint)
     }
 
+    override suspend fun updateSimilarQuestions(id: Long, json: String?) {
+        questionDao.updateSimilarQuestions(id, json)
+    }
+
     override suspend fun deleteQuestion(id: Long) {
         // 先取 imagePath 再删行，落库记录删除的同时清理磁盘原图，避免孤儿文件
         val imagePath = questionDao.getQuestionById(id)?.imagePath
@@ -185,6 +189,7 @@ class QuestionRepositoryImpl @Inject constructor(
             imagePath = imagePath,
             aiAnalysis = aiAnalysis,
             knowledgePoint = knowledgePoint,
+            similarQuestionsJson = similarQuestions,
             leitnerBox = leitnerBox,
             easeFactor = easeFactor,
             intervalDays = intervalDays,
@@ -209,6 +214,7 @@ class QuestionRepositoryImpl @Inject constructor(
             imagePath = imagePath,
             aiAnalysis = aiAnalysis,
             knowledgePoint = knowledgePoint,
+            similarQuestions = similarQuestionsJson,
             leitnerBox = leitnerBox,
             easeFactor = easeFactor,
             intervalDays = intervalDays,

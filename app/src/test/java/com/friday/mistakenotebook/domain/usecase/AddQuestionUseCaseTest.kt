@@ -112,6 +112,7 @@ class FakeQuestionRepository : QuestionRepository {
     override suspend fun getQuestionById(id: Long): com.friday.mistakenotebook.domain.model.Question? = null
     override suspend fun updateQuestion(question: com.friday.mistakenotebook.domain.model.Question) {}
     override suspend fun updateAnalysis(id: Long, aiAnalysis: String?, knowledgePoint: String?) {}
+    override suspend fun updateSimilarQuestions(id: Long, json: String?) {}
     override suspend fun deleteQuestion(id: Long) {}
     override suspend fun processReviewResult(result: com.friday.mistakenotebook.domain.model.ReviewResult) {}
     override fun searchQuestions(query: String): kotlinx.coroutines.flow.Flow<List<com.friday.mistakenotebook.domain.model.Question>> = kotlinx.coroutines.flow.flowOf(emptyList())

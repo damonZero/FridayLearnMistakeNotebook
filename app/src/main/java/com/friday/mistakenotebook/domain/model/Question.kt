@@ -17,6 +17,8 @@ data class Question(
     val imagePath: String? = null,
     val aiAnalysis: String? = null,
     val knowledgePoint: String? = null,
+    // 举一反三题目 JSON（持久化，空表示未生成过）
+    val similarQuestionsJson: String? = null,
     val leitnerBox: Int = 1,
     val easeFactor: Float = 2.5f,
     val intervalDays: Int = 1,

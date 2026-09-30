@@ -47,6 +47,9 @@ interface QuestionRepository {
     /** 只更新 AI 分析摘要列（详情页分析结果落库用） */
     suspend fun updateAnalysis(id: Long, aiAnalysis: String?, knowledgePoint: String?)
 
+    /** 保存/清空举一反三（JSON） */
+    suspend fun updateSimilarQuestions(id: Long, json: String?)
+
     suspend fun deleteQuestion(id: Long)
 
     suspend fun processReviewResult(result: ReviewResult)

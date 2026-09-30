@@ -55,6 +55,10 @@ interface QuestionDao {
     @Query("UPDATE questions SET aiAnalysis = :aiAnalysis, knowledgePoint = :knowledgePoint WHERE id = :id")
     suspend fun updateAnalysis(id: Long, aiAnalysis: String?, knowledgePoint: String?)
 
+    /** 保存/清空举一反三（JSON），练习页刷新与打印生成时写入 */
+    @Query("UPDATE questions SET similarQuestions = :json WHERE id = :id")
+    suspend fun updateSimilarQuestions(id: Long, json: String?)
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertQuestion(question: QuestionEntity): Long
 

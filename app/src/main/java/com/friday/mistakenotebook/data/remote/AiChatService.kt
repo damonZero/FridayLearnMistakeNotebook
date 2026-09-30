@@ -49,6 +49,34 @@ data class QuestionExtraction(
 )
 
 /**
+ * 举一反三题目的 JSON 编解码：持久化到 questions.similarQuestions 列，
+ * 下次进入练习/打印直接复用，无需重新生成
+ */
+object SimilarQuestionCodec {
+    private val gson = com.google.gson.Gson()
+
+    fun encode(list: List<GeneratedQuestion>): String = gson.toJson(list)
+
+    fun decode(json: String): List<GeneratedQuestion> = try {
+        JsonParser.parseString(json).asJsonArray.mapNotNull { element ->
+            try {
+                val obj = element.asJsonObject
+                val content = obj.get("content")?.takeIf { it.isJsonPrimitive }?.asString?.trim().orEmpty()
+                if (content.isBlank()) null else GeneratedQuestion(
+                    content = content,
+                    answer = obj.get("answer")?.takeIf { it.isJsonPrimitive }?.asString?.trim().orEmpty(),
+                    variation = obj.get("variation")?.takeIf { it.isJsonPrimitive }?.asString?.trim().orEmpty()
+                )
+            } catch (e: Exception) {
+                null
+            }
+        }
+    } catch (e: Exception) {
+        emptyList()
+    }
+}
+
+/**
  * 通用 AI 文本对话服务：按任务类型读取启用配置，POST {baseUrl}/chat/completions（OpenAI 兼容）。
  * 所有计费调用统一写用量日志（含失败记 0），瞬时网络错误自动重试一次。
  */
@@ -253,9 +281,6 @@ class AiChatService @Inject constructor(
     }
 
     /**
-     * 生成相似题：仿照原题出 count 道考查相同知识点的练习题
-     */
-    /**
      * 生成相似题：「举一反三」按由近及远的变化梯度出题——
      * 第 1 题同型巩固（最接近原题，确认基本方法）、第 2 题情境变换（换壳不换考点，
      * 迫使学生重新识别）、第 3 题逆向/综合（反问或小综合，考本质理解）。
@@ -282,7 +307,7 @@ class AiChatService @Inject constructor(
             appendLine()
             appendLine("请只输出一个 JSON 数组，不要输出任何其他文字或代码块标记，每个元素格式：")
             appendLine("""{"content": "题目内容", "answer": "答案与简要思路", "variation": "同型巩固"}""")
-            appendLine("其中 variation 只能填：同型巩固 / 情境变换 / 逆向综合")
+            appendLine("其中 variation 只能填：同型巩固 / 情境变换 / 逆向综合；answer 不能为空，必须先给出最终答案，再附 1~2 句简要思路")
         }
 
         // 思考型模型（deepseek-flash）会先消耗大量输出预算在推理上，
@@ -338,8 +363,7 @@ class AiChatService @Inject constructor(
     /**
      * 从 OpenAI 兼容响应中提取 choices[0].message.content
      * （兼容 content 为字符串或分段数组；思考型模型正文为空时兜底读 reasoning_content）
-     */
-    private fun extractContent(responseBody: String): String? {
+     */    private fun extractContent(responseBody: String): String? {
         return try {
             val json = JsonParser.parseString(responseBody).asJsonObject
             val choices = json.getAsJsonArray("choices") ?: return null

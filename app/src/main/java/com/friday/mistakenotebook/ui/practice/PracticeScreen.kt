@@ -24,6 +24,7 @@ fun PracticeScreen(
     viewModel: PracticeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var showRefreshDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -34,10 +35,21 @@ fun PracticeScreen(
                         Icon(Icons.Default.ArrowBack, contentDescription = "返回")
                     }
                 },
+                actions = {
+                    if (uiState.questions.isNotEmpty()) {
+                        IconButton(
+                            onClick = { showRefreshDialog = true },
+                            enabled = !uiState.isLoading
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = "刷新举一反三")
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
                 )
             )
         }
@@ -65,7 +77,7 @@ fun PracticeScreen(
                 PracticeErrorContent(
                     modifier = Modifier.padding(padding),
                     error = uiState.error!!,
-                    onRetry = { viewModel.generateQuestions() }
+                    onRetry = { viewModel.refreshQuestions() }
                 )
             }
             uiState.isCompleted -> {
@@ -73,7 +85,7 @@ fun PracticeScreen(
                     modifier = Modifier.padding(padding),
                     totalCount = uiState.questions.size,
                     knownCount = uiState.knownCount,
-                    onPracticeAgain = { viewModel.generateQuestions() },
+                    onPracticeAgain = { viewModel.restart() },
                     onBack = { navController.popBackStack() }
                 )
             }
@@ -82,7 +94,7 @@ fun PracticeScreen(
                 PracticeErrorContent(
                     modifier = Modifier.padding(padding),
                     error = "没有可练习的题目",
-                    onRetry = { viewModel.generateQuestions() }
+                    onRetry = { viewModel.refreshQuestions() }
                 )
             }
             else -> {
@@ -95,6 +107,23 @@ fun PracticeScreen(
                 )
             }
         }
+    }
+
+    if (showRefreshDialog) {
+        AlertDialog(
+            onDismissRequest = { showRefreshDialog = false },
+            title = { Text("刷新举一反三？") },
+            text = { Text("将重新生成一组新的题目，并覆盖当前保存的内容。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showRefreshDialog = false
+                    viewModel.refreshQuestions()
+                }) { Text("刷新") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRefreshDialog = false }) { Text("取消") }
+            }
+        )
     }
 }
 

@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.friday.mistakenotebook.data.remote.AiChatService
 import com.friday.mistakenotebook.data.remote.KnowledgeAnalysis
+import com.friday.mistakenotebook.data.remote.SimilarQuestionCodec
 import com.friday.mistakenotebook.domain.model.Question
 import com.friday.mistakenotebook.domain.repository.QuestionRepository
 import com.friday.mistakenotebook.print.PracticeSheetPdfGenerator
@@ -102,10 +103,29 @@ class QuestionDetailViewModel @Inject constructor(
         _sheetState.value = SheetGenerateState.Generating("正在生成举一反三…")
         viewModelScope.launch {
             try {
+                // 优先用已保存的举一反三（与练习页一致），没有才现场生成并保存
+                val cached = question.similarQuestionsJson
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let { SimilarQuestionCodec.decode(it) }
+                    .orEmpty()
                 var simFailed = false
-                val similar = aiChatService.generateSimilarQuestions(question.content)
-                    .onFailure { simFailed = true }
-                    .getOrElse { emptyList() }
+                val similar = if (cached.isNotEmpty()) {
+                    cached
+                } else {
+                    aiChatService.generateSimilarQuestions(question.content)
+                        .onFailure { simFailed = true }
+                        .getOrElse { emptyList() }
+                        .also { list ->
+                            if (list.isNotEmpty()) {
+                                runCatching {
+                                    questionRepository.updateSimilarQuestions(
+                                        question.id,
+                                        SimilarQuestionCodec.encode(list)
+                                    )
+                                }
+                            }
+                        }
+                }
                 _sheetState.value = SheetGenerateState.Generating("正在排版生成 PDF…")
                 val title = "错题练习卷${question.knowledgePoint?.takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""}"
                 val files = pdfGenerator.generate(

@@ -61,6 +61,7 @@ data class QuestionEntity(
     val imagePath: String? = null,
     val aiAnalysis: String? = null,    // AI 知识点分析摘要（详情页展示，可覆盖重存）
     val knowledgePoint: String? = null, // 考点标签（AI 识题预填，卡片展示与列表分组用）
+    val similarQuestions: String? = null, // 举一反三 JSON（持久化，练习页/打印复用，可刷新覆盖）
 
     // 间隔重复算法相关
     val leitnerBox: Int = 1,           // 莱特纳盒子等级 (1-5)

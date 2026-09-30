@@ -159,21 +159,9 @@ class PracticeSheetPdfGenerator @Inject constructor(
             y += spacingAfter
         }
 
-        /** 作答留白框 */
+        /** 作答留白：试卷风格，纯空白不画线 */
         fun drawBlankArea(height: Float = 110f) {
             ensure(height)
-            val c = canvas!!
-            val p = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                style = Paint.Style.STROKE; strokeWidth = 1f; color = LINE
-            }
-            c.drawRect(MARGIN, y, PAGE_W - MARGIN, y + height, p)
-            // 浅色横线
-            val lp = Paint().apply { strokeWidth = 0.8f; color = LINE }
-            var lineY = y + 26f
-            while (lineY < y + height - 8f) {
-                c.drawLine(MARGIN + 8f, lineY, PAGE_W - MARGIN - 8f, lineY, lp)
-                lineY += 26f
-            }
             y += height + 10f
         }
 
@@ -316,10 +304,6 @@ class PracticeSheetPdfGenerator @Inject constructor(
             writer.drawText("第 ${index + 1} 题（原错题）", titlePaint(13f), 4f)
             writer.drawText(q.content, bodyPaint(), 6f)
             writer.drawText("正确答案：${q.answer.ifBlank { "（未填写）" }}", bodyPaint(), 6f)
-            q.aiAnalysis?.takeIf { it.isNotBlank() }?.let {
-                writer.drawText("AI 分析：$it", bodyPaint(), 6f)
-            }
-            writer.drawText("孩子的记录：上一次作答 —— ${q.userAnswer.ifBlank { "（无记录）" }}", grayPaint(10f), 8f)
 
             if (includeSimilar) {
                 item.similar.forEachIndexed { sIdx, s ->
@@ -329,6 +313,13 @@ class PracticeSheetPdfGenerator @Inject constructor(
                     )
                 }
             }
+
+            // AI 分析跟在答案区一起，方便家长对照讲解
+            q.aiAnalysis?.takeIf { it.isNotBlank() }?.let {
+                writer.drawText("AI 分析：$it", bodyPaint(), 6f)
+            }
+            writer.drawText("孩子的记录：上一次作答 —— ${q.userAnswer.ifBlank { "（无记录）" }}", grayPaint(10f), 8f)
+
             writer.drawDivider()
         }
 

@@ -31,6 +31,13 @@ object DatabaseModule {
         }
     }
 
+    // v3 -> v4：错题表新增举一反三持久化列（JSON，练习/打印复用，可刷新覆盖）
+    private val MIGRATION_3_4 = object : Migration(3, 4) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("ALTER TABLE questions ADD COLUMN similarQuestions TEXT")
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): MistakeNotebookDatabase {
@@ -39,7 +46,7 @@ object DatabaseModule {
             MistakeNotebookDatabase::class.java,
             MistakeNotebookDatabase.DATABASE_NAME
         )
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
             // 禁止静默清库：schema 升级必须显式提供 Migration
             .build()
     }
