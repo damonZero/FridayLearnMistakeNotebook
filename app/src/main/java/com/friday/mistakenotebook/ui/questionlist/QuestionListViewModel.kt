@@ -33,7 +33,8 @@ enum class QuestionGroup(val label: String) {
     NONE("不分组"),
     BY_STATUS("按掌握状态"),
     BY_ERROR_TYPE("按错误类型"),
-    BY_DATE("按录入日期")
+    BY_DATE("按录入日期"),
+    BY_KNOWLEDGE_POINT("按知识点")
 }
 
 /** 分组后的一个段落（title 为空表示不分组渲染） */
@@ -161,6 +162,11 @@ class QuestionListViewModel @Inject constructor(
             // groupBy 保留首次出现顺序，与当前排序一致：日期自然从新到旧
             QuestionGroup.BY_DATE -> list.groupBy { dateLabel(it.createdAt) }
                 .map { QuestionSection(it.key, it.value) }
+            // 按考点分组：考点多的排前面，未标注的沉底
+            QuestionGroup.BY_KNOWLEDGE_POINT -> list
+                .groupBy { it.knowledgePoint?.trim().takeUnless { t -> t.isNullOrBlank() } ?: "未标注" }
+                .map { QuestionSection(it.key, it.value) }
+                .sortedByDescending { it.questions.size }
         }
     }
 

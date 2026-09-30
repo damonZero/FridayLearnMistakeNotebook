@@ -29,9 +29,10 @@ data class CameraUiState(
     // 本次图片压缩存盘后的绝对路径（filesDir/images），失败为 null，不影响 OCR
     val imagePath: String? = null,
     val ocrResult: OcrResult? = null,
-    // AI 识题整理出的参考答案（多解法）与学生作答，失败/缺失为空串
+    // AI 识题整理出的参考答案（多解法）与学生作答、考点标签，失败/缺失为空串
     val answer: String = "",
     val userAnswer: String = "",
+    val knowledgePoint: String = "",
     val isProcessing: Boolean = false,
     val error: String? = null,
     val isOcrComplete: Boolean = false,
@@ -119,12 +120,14 @@ class CameraViewModel @Inject constructor(
                 val result: OcrResult
                 var answer = ""
                 var userAnswer = ""
+                var knowledgePoint = ""
                 if (extraction.isSuccess) {
                     val ex = extraction.getOrThrow()
                     Log.d("OCR_CAMERA", "AI 识题成功: content=${ex.content.take(50)}...")
                     result = OcrResult(text = ex.content, confidence = 0.95f)
                     answer = ex.answer
                     userAnswer = ex.userAnswer
+                    knowledgePoint = ex.knowledgePoint
                 } else {
                     Log.w("OCR_CAMERA", "AI 识题失败，回退纯 OCR: ${extraction.exceptionOrNull()?.message}")
                     result = ocrService.recognizeText(base64)
@@ -139,6 +142,7 @@ class CameraViewModel @Inject constructor(
                         imagePath = savedPath,
                         answer = answer,
                         userAnswer = userAnswer,
+                        knowledgePoint = knowledgePoint,
                         isProcessing = false,
                         isOcrComplete = true,
                         ocrHint = when {

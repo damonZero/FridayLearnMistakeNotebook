@@ -63,8 +63,13 @@ class QuestionDetailViewModel @Inject constructor(
                 userAnswer = question.userAnswer.takeIf { it.isNotBlank() },
                 correctAnswer = question.answer.takeIf { it.isNotBlank() }
             ).onSuccess { analysis ->
-                // 只写 aiAnalysis 列：整行回写会把分析期间发生的复习排期变更（盒/间隔/日期）回滚掉
-                questionRepository.updateAiAnalysis(questionId, buildAnalysisSummary(analysis))
+                // 只写分析列与考点标签：整行回写会把分析期间发生的复习排期变更（盒/间隔/日期）回滚掉；
+                // 分析未给出知识点时保留原标签
+                questionRepository.updateAnalysis(
+                    questionId,
+                    buildAnalysisSummary(analysis),
+                    analysis.knowledgePoints.firstOrNull() ?: question.knowledgePoint
+                )
                 val fresh = questionRepository.getQuestionById(questionId)
                 _uiState.update {
                     it.copy(

@@ -38,13 +38,14 @@ interface QuestionRepository {
         errorType: ErrorType,
         chapterId: Long? = null,
         knowledgePointId: Long? = null,
-        imagePath: String? = null
+        imagePath: String? = null,
+        knowledgePoint: String? = null
     ): Long
 
     suspend fun updateQuestion(question: Question)
 
     /** 只更新 AI 分析摘要列（详情页分析结果落库用） */
-    suspend fun updateAiAnalysis(id: Long, aiAnalysis: String?)
+    suspend fun updateAnalysis(id: Long, aiAnalysis: String?, knowledgePoint: String?)
 
     suspend fun deleteQuestion(id: Long)
 

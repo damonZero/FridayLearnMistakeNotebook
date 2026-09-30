@@ -24,6 +24,13 @@ object DatabaseModule {
         }
     }
 
+    // v2 -> v3：错题表新增知识点标签列（AI 识题预填，列表分组/卡片展示用）
+    private val MIGRATION_2_3 = object : Migration(2, 3) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("ALTER TABLE questions ADD COLUMN knowledgePoint TEXT")
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): MistakeNotebookDatabase {
@@ -32,7 +39,7 @@ object DatabaseModule {
             MistakeNotebookDatabase::class.java,
             MistakeNotebookDatabase.DATABASE_NAME
         )
-            .addMigrations(MIGRATION_1_2)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
             // 禁止静默清库：schema 升级必须显式提供 Migration
             .build()
     }

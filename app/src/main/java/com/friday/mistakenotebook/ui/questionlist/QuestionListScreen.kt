@@ -273,10 +273,22 @@ fun QuestionCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                SuggestionChip(
-                    onClick = {},
-                    label = { Text(getErrorTypeName(question.errorType), fontSize = 12.sp) }
-                )
+                Row(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    SuggestionChip(
+                        onClick = {},
+                        label = { Text(getErrorTypeName(question.errorType), fontSize = 12.sp) }
+                    )
+                    if (!question.knowledgePoint.isNullOrBlank()) {
+                        SuggestionChip(
+                            onClick = {},
+                            label = { Text("📚 ${question.knowledgePoint}", fontSize = 12.sp) }
+                        )
+                    }
+                }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = SpacedRepetitionAlgorithm.getBoxDescription(question.leitnerBox),

@@ -260,6 +260,10 @@ fun CameraScreen(
                                 navController.previousBackStackEntry?.savedStateHandle
                                     ?.set("ocr_user_answer", userAnswer)
                             }
+                            uiState.knowledgePoint.takeIf { it.isNotBlank() }?.let { kp ->
+                                navController.previousBackStackEntry?.savedStateHandle
+                                    ?.set("ocr_knowledge_point", kp)
+                            }
                             onOcrComplete(uiState.ocrResult!!.text)
                         },
                         modifier = Modifier.fillMaxWidth()

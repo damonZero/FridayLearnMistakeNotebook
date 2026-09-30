@@ -51,9 +51,9 @@ interface QuestionDao {
     @Query("SELECT COUNT(*) FROM questions WHERE subjectId = :subjectId AND nextReviewDate <= :dueUntil")
     fun getTodayDueCountBySubject(subjectId: Long, dueUntil: Long): Flow<Int>
 
-    /** 只更新 AI 分析列，避免整行回写覆盖分析期间发生的复习排期变更 */
-    @Query("UPDATE questions SET aiAnalysis = :aiAnalysis WHERE id = :id")
-    suspend fun updateAiAnalysis(id: Long, aiAnalysis: String?)
+    /** 只更新 AI 分析列与考点标签，避免整行回写覆盖分析期间发生的复习排期变更 */
+    @Query("UPDATE questions SET aiAnalysis = :aiAnalysis, knowledgePoint = :knowledgePoint WHERE id = :id")
+    suspend fun updateAnalysis(id: Long, aiAnalysis: String?, knowledgePoint: String?)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertQuestion(question: QuestionEntity): Long

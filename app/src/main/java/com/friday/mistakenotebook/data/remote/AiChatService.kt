@@ -44,7 +44,8 @@ data class GeneratedQuestion(
 data class QuestionExtraction(
     val content: String,
     val userAnswer: String,
-    val answer: String
+    val answer: String,
+    val knowledgePoint: String
 )
 
 /**
@@ -245,7 +246,7 @@ class AiChatService @Inject constructor(
             appendLine("""{"knowledgePoints": ["知识点1", "知识点2"], "errorTypeGuess": "错误原因的简短描述", "analysis": "详细分析：涉及的知识点、错因、正确解法"}""")
         }
 
-        return chat(AiTaskType.ANALYSIS, prompt, maxTokens = 2048).mapCatching { content ->
+        return chat(AiTaskType.ANALYSIS, prompt, maxTokens = 4096).mapCatching { content ->
             parseKnowledgeAnalysis(content)
                 ?: throw IllegalStateException("AI 返回的分析内容无法解析，请重试")
         }
@@ -284,7 +285,9 @@ class AiChatService @Inject constructor(
             appendLine("其中 variation 只能填：同型巩固 / 情境变换 / 逆向综合")
         }
 
-        return chat(AiTaskType.SIMILAR_QUESTION, prompt, maxTokens = 2048).mapCatching { content ->
+        // 思考型模型（deepseek-flash）会先消耗大量输出预算在推理上，
+        // 2048 常常导致正文为空——生成类调用统一放宽到 4096
+        return chat(AiTaskType.SIMILAR_QUESTION, prompt, maxTokens = 4096).mapCatching { content ->
             parseGeneratedQuestions(content)
                 ?: throw IllegalStateException("AI 返回的相似题内容无法解析，请重试")
         }
@@ -300,11 +303,12 @@ class AiChatService @Inject constructor(
             appendLine("1. 提取题目内容（题干与选项，不要包含学生手写的作答）")
             appendLine("2. 如果照片里有学生手写的答案或解题过程，原样提取为学生的答案；没有则输出空字符串")
             appendLine("3. 给出正确答案与解析：尽量提供两种以上解法思路（用 1. 2. 编号区分），语言适合小学生理解")
+            appendLine("4. 判断这道题考查的核心知识点，用 2~8 个字的短语概括（例如：鸡兔同笼、分数加减、单位换算、多边形面积）")
             appendLine()
             appendLine("请只输出一个 JSON 对象，不要输出任何其他文字或代码块标记，格式：")
-            appendLine("""{"content": "题目内容", "userAnswer": "学生的答案，没有则留空", "answer": "正确答案与多种解法思路"}""")
+            appendLine("""{"content": "题目内容", "userAnswer": "学生的答案，没有则留空", "answer": "正确答案与多种解法思路", "knowledgePoint": "核心知识点短语"}""")
         }
-        return chatWithImage(AiTaskType.OCR, imageBase64, prompt, maxTokens = 2048).mapCatching { content ->
+        return chatWithImage(AiTaskType.OCR, imageBase64, prompt, maxTokens = 4096).mapCatching { content ->
             parseQuestionExtraction(content)
                 ?: throw IllegalStateException("AI 返回的识题内容无法解析，请重试")
         }
@@ -322,7 +326,8 @@ class AiChatService @Inject constructor(
                 QuestionExtraction(
                     content = questionContent,
                     userAnswer = read("userAnswer"),
-                    answer = read("answer")
+                    answer = read("answer"),
+                    knowledgePoint = read("knowledgePoint")
                 )
             }
         } catch (e: Exception) {
@@ -331,7 +336,8 @@ class AiChatService @Inject constructor(
     }
 
     /**
-     * 从 OpenAI 兼容响应中提取 choices[0].message.content（兼容 content 为字符串或分段数组）
+     * 从 OpenAI 兼容响应中提取 choices[0].message.content
+     * （兼容 content 为字符串或分段数组；思考型模型正文为空时兜底读 reasoning_content）
      */
     private fun extractContent(responseBody: String): String? {
         return try {
@@ -340,9 +346,10 @@ class AiChatService @Inject constructor(
             if (choices.size() == 0) return null
 
             val message = choices[0].asJsonObject.getAsJsonObject("message") ?: return null
-            val contentElement = message.get("content") ?: return null
+            val contentElement = message.get("content")
 
-            when {
+            val content = when {
+                contentElement == null || contentElement.isJsonNull -> ""
                 contentElement.isJsonPrimitive -> contentElement.asString
                 contentElement.isJsonArray -> contentElement.asJsonArray.joinToString(separator = "\n") { part ->
                     when {
@@ -352,7 +359,16 @@ class AiChatService @Inject constructor(
                     }
                 }
                 else -> ""
-            }.trim().takeIf { it.isNotBlank() }
+            }
+
+            val finalContent = if (content.isNotBlank()) {
+                content
+            } else {
+                // 输出预算被推理耗尽时正文可能为空，从思考内容里容错提取（JSON 解析本身有截取容错）
+                message.get("reasoning_content")?.takeIf { it.isJsonPrimitive }?.asString.orEmpty()
+            }
+
+            finalContent.trim().takeIf { it.isNotBlank() }
         } catch (e: Exception) {
             null
         }

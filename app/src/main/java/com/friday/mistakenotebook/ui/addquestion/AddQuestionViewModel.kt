@@ -24,6 +24,8 @@ data class AddQuestionUiState(
     val errorType: ErrorType = ErrorType.UNKNOWN,
     // 拍照识别时随 OCR 结果回传的原图绝对路径；手动录入为 null
     val imagePath: String? = null,
+    // 考点标签（AI 识题预填，可修改）
+    val knowledgePoint: String = "",
     val isLoading: Boolean = false,
     val isSaved: Boolean = false,
     val ocrApplied: Boolean = false,
@@ -81,6 +83,10 @@ class AddQuestionViewModel @Inject constructor(
         _uiState.update { it.copy(userAnswer = userAnswer) }
     }
 
+    fun updateKnowledgePoint(knowledgePoint: String) {
+        _uiState.update { it.copy(knowledgePoint = knowledgePoint) }
+    }
+
     fun updateErrorType(errorType: ErrorType) {
         _uiState.update { it.copy(errorType = errorType) }
     }
@@ -100,17 +106,19 @@ class AddQuestionViewModel @Inject constructor(
         content: String,
         imagePath: String? = null,
         answer: String = "",
-        userAnswer: String = ""
+        userAnswer: String = "",
+        knowledgePoint: String = ""
     ) {
         val normalizedContent = content.trim()
         if (normalizedContent.isBlank()) return
-        // 题干、学生作答、参考答案一起预填；答案可留空由用户核对补充
+        // 题干、学生作答、参考答案、考点一起预填；答案可留空由用户核对补充
         _uiState.update {
             it.copy(
                 content = normalizedContent,
                 imagePath = imagePath,
                 answer = answer.trim(),
                 userAnswer = userAnswer.trim(),
+                knowledgePoint = knowledgePoint.trim(),
                 ocrApplied = true,
                 isSaved = false
             )
@@ -150,7 +158,8 @@ class AddQuestionViewModel @Inject constructor(
                     answer = state.answer,
                     userAnswer = state.userAnswer,
                     errorType = state.errorType,
-                    imagePath = state.imagePath
+                    imagePath = state.imagePath,
+                    knowledgePoint = state.knowledgePoint.trim().ifBlank { null }
                 )
                 _uiState.update {
                     it.copy(

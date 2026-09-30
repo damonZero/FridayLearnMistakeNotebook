@@ -109,7 +109,8 @@ class QuestionRepositoryImpl @Inject constructor(
         errorType: ErrorType,
         chapterId: Long?,
         knowledgePointId: Long?,
-        imagePath: String?
+        imagePath: String?,
+        knowledgePoint: String?
     ): Long {
         val entity = QuestionEntity(
             subjectId = subjectId,
@@ -119,7 +120,8 @@ class QuestionRepositoryImpl @Inject constructor(
             errorType = errorType,
             chapterId = chapterId,
             knowledgePointId = knowledgePointId,
-            imagePath = imagePath
+            imagePath = imagePath,
+            knowledgePoint = knowledgePoint?.trim()?.ifBlank { null }
         )
         return questionDao.insertQuestion(entity)
     }
@@ -129,8 +131,8 @@ class QuestionRepositoryImpl @Inject constructor(
         questionDao.updateQuestion(entity)
     }
 
-    override suspend fun updateAiAnalysis(id: Long, aiAnalysis: String?) {
-        questionDao.updateAiAnalysis(id, aiAnalysis)
+    override suspend fun updateAnalysis(id: Long, aiAnalysis: String?, knowledgePoint: String?) {
+        questionDao.updateAnalysis(id, aiAnalysis, knowledgePoint)
     }
 
     override suspend fun deleteQuestion(id: Long) {
@@ -182,6 +184,7 @@ class QuestionRepositoryImpl @Inject constructor(
             errorType = errorType,
             imagePath = imagePath,
             aiAnalysis = aiAnalysis,
+            knowledgePoint = knowledgePoint,
             leitnerBox = leitnerBox,
             easeFactor = easeFactor,
             intervalDays = intervalDays,
@@ -205,6 +208,7 @@ class QuestionRepositoryImpl @Inject constructor(
             errorType = errorType,
             imagePath = imagePath,
             aiAnalysis = aiAnalysis,
+            knowledgePoint = knowledgePoint,
             leitnerBox = leitnerBox,
             easeFactor = easeFactor,
             intervalDays = intervalDays,

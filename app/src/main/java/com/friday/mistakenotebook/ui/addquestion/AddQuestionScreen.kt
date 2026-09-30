@@ -52,11 +52,19 @@ fun AddQuestionScreen(
             val imagePath = savedStateHandle?.get<String>("ocr_image_path")
             val answer = savedStateHandle?.get<String>("ocr_answer")
             val userAnswer = savedStateHandle?.get<String>("ocr_user_answer")
-            viewModel.createQuestionDraftFromOcr(result, imagePath, answer.orEmpty(), userAnswer.orEmpty())
+            val knowledgePoint = savedStateHandle?.get<String>("ocr_knowledge_point")
+            viewModel.createQuestionDraftFromOcr(
+                result,
+                imagePath,
+                answer.orEmpty(),
+                userAnswer.orEmpty(),
+                knowledgePoint.orEmpty()
+            )
             savedStateHandle?.remove<String>("ocr_result")
             savedStateHandle?.remove<String>("ocr_image_path")
             savedStateHandle?.remove<String>("ocr_answer")
             savedStateHandle?.remove<String>("ocr_user_answer")
+            savedStateHandle?.remove<String>("ocr_knowledge_point")
         }
     }
 
@@ -172,6 +180,17 @@ fun AddQuestionScreen(
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 2,
                 maxLines = 4
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = uiState.knowledgePoint,
+                onValueChange = { viewModel.updateKnowledgePoint(it) },
+                label = { Text("知识点") },
+                placeholder = { Text("如：鸡兔同笼、分数加减（AI 会自动预填）") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
             )
 
             Spacer(modifier = Modifier.height(20.dp))

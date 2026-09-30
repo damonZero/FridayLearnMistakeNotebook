@@ -60,6 +60,7 @@ data class QuestionEntity(
     val errorType: ErrorType = ErrorType.UNKNOWN,
     val imagePath: String? = null,
     val aiAnalysis: String? = null,    // AI 知识点分析摘要（详情页展示，可覆盖重存）
+    val knowledgePoint: String? = null, // 考点标签（AI 识题预填，卡片展示与列表分组用）
 
     // 间隔重复算法相关
     val leitnerBox: Int = 1,           // 莱特纳盒子等级 (1-5)
