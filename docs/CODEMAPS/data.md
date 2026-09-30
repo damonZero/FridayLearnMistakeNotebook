@@ -1,8 +1,9 @@
 <!-- Generated: 2026-09-27 | Files scanned: 12 | Token estimate: ~600 -->
 
-# 数据库 — Room（MistakeNotebookDatabase, v1, exportSchema 未设）
+# 数据库 — Room（MistakeNotebookDatabase, **v2**, exportSchema=true → schemas/，Migration 显式声明于 DatabaseModule）
 
 位置：`data/local/`；类型转换：`Converters.kt`（enum ↔ name 等隐式转换）
+迁移历史：`MIGRATION_1_2`（questions 加 aiAnalysis TEXT）；schema 基线 1.json/2.json 已入库
 
 ## 实体与关系
 
@@ -18,7 +19,7 @@ subjects (SubjectEntity) 1 ──── n chapters (ChapterEntity) 1 ───�
 | `subjects` | name, icon, color, isPreset | 预设语文/数学/英语，删除保护靠 isPreset |
 | `chapters` | subjectId FK, name | 无管理 UI |
 | `knowledge_points` | chapterId FK, name, description | 无管理 UI |
-| `questions` | content, answer, userAnswer, errorType, imagePath, **nextReviewDate, leitnerBox(1-5), easeFactor, streak, reviewCount** | 核心；错误类型枚举 UNKNOWN/CARELESS/CONCEPTUAL/METHOD/CALCULATION |
+| `questions` | content, answer, userAnswer, errorType, imagePath, **nextReviewDate, leitnerBox(1-5), easeFactor, streak, reviewCount, aiAnalysis(AI分析摘要)** | 核心；错误类型枚举 UNKNOWN/CARELESS/CONCEPTUAL/METHOD/CALCULATION |
 | `ai_configs` | provider, apiKey, baseUrl, modelName, taskType(AiTaskType), isEnabled | **apiKey 明文存储**（需求要求加密） |
 | `ai_usage_logs` | provider, taskType, modelName, inputTokens, outputTokens, estimatedCost | 费用统计来源 |
 

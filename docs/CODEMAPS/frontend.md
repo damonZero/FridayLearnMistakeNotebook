@@ -14,7 +14,9 @@ review          ReviewScreen    — ReviewContent(答题卡) / EmptyReviewConten
 settings        SettingsScreen  — 设置分区列表（无独立 ViewModel）
   ├─ add_question?subjectId  AddQuestionScreen — 表单 + 相机/OCR结果回填(getErrorTypeName)
   ├─ camera                  CameraScreen    — CameraX 预览拍照 → OCR → 回传上一页
-  ├─ question_list?subjectId QuestionListScreen — 筛选列表 / QuestionCard / EmptyQuestionList
+  ├─ question_list?subjectId QuestionListScreen — 筛选列表 / QuestionCard(点击进详情) / EmptyQuestionList
+  ├─ question/{questionId}   QuestionDetailScreen — 原图/答案/复习状态/AI分析(存aiAnalysis)/相似题入口/删除
+  ├─ practice/{questionId}   PracticeScreen — AI生成相似题 → 逐题自评 → 小结（不计入复习计划）
   ├─ stats                   StatsScreen     — MasteryLevelItem 掌握度分布
   ├─ ai_config               AiConfigScreen  — AiConfigCard / AiConfigDialog / 连接测试
   ├─ ai_usage                AiUsageScreen   — 调用日志 + 费用汇总 AiUsageLogCard

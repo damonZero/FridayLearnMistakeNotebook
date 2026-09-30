@@ -2,16 +2,22 @@
 
 # 数据与业务层（Android 无服务器，本文档对应 domain + data 层）
 
-## 远程服务（唯一外部调用）
+## 远程服务
 
 ```
 VolcanoOcrService.recognizeText(imageBase64) : OcrResult
   → 读取 AiConfigDao.getEnabledConfigByTaskType(OCR)  // Key/BaseUrl/Model 用户配置
-  → POST {baseUrl}/chat/completions  (OpenAI 兼容, Bearer 认证)
+  → POST {baseUrl}/chat/completions  (OpenAI 兼容, Bearer 认证, 瞬时错误重试1次)
   → OcrResponseParser.parse() → OcrResult(text, confidence, textBlocks)
+  → 解析 usage.tokens → aiUsageLogDao.insertUsageLog（费用按模型名估算，失败不影响识别）
+
+AiChatService (data/remote/AiChatService.kt)
+  → chat(taskType, prompt): Result<String>，按 ANALYSIS / SIMILAR_QUESTION 任务读配置
+  → analyzeKnowledge(...) → KnowledgeAnalysis(知识点/错因/分析)
+  → generateSimilarQuestions(...) → List<GeneratedQuestion>
 ```
 
-注意：**AI 分析知识点、相似题生成仅有 DB/DTO 脚手架，无实现**（见 ai_configs 表按任务类型预留，`AiTaskType` 目前实际使用仅 OCR）。
+AI 分析结果存 questions.aiAnalysis（详情页展示/重分析覆盖）；相似题仅练习会话内使用不入库。
 
 ## 用例 → 仓库 → DAO 映射
 
