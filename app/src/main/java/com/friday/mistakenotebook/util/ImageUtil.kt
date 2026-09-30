@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.net.Uri
+import android.util.Log
 import android.util.Base64
 import androidx.exifinterface.media.ExifInterface
 import java.io.ByteArrayOutputStream
@@ -18,6 +19,7 @@ import javax.inject.Singleton
 class ImageUtil @Inject constructor() {
 
     companion object {
+        private const val TAG = "ImageUtil"
         // OCR 送检图片的最大边长：超过会显著增大上传体积且识别率无明显提升
         private const val MAX_DIMENSION = 2048
         private const val JPEG_QUALITY = 80
@@ -30,12 +32,16 @@ class ImageUtil @Inject constructor() {
      */
     fun uriToBase64(context: Context, uri: Uri): String? {
         return try {
-            // 第一遍：只读尺寸，不解码像素
+            // 第一遍：只读尺寸，不解码像素。
+            // 注意：bounds 模式下 decodeStream 返回 null 是正常行为，不能用它的结果做非空判断！
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             context.contentResolver.openInputStream(uri)?.use {
                 BitmapFactory.decodeStream(it, null, bounds)
-            } ?: return null
-            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+            }
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
+                Log.w(TAG, "读取图片尺寸失败: $uri")
+                return null
+            }
 
             // 第二遍：按采样率解码，控制内存
             val options = BitmapFactory.Options().apply {
@@ -43,13 +49,17 @@ class ImageUtil @Inject constructor() {
             }
             val bitmap = context.contentResolver.openInputStream(uri)?.use {
                 BitmapFactory.decodeStream(it, null, options)
-            } ?: return null
+            }
+            if (bitmap == null) {
+                Log.w(TAG, "图片解码失败: $uri")
+                return null
+            }
 
             val rotated = applyExifRotation(context, uri, bitmap)
             val scaled = scaleDown(rotated, MAX_DIMENSION)
             bitmapToBase64(scaled)
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "图片转 Base64 异常: ${e.message}")
             null
         }
     }
@@ -60,22 +70,30 @@ class ImageUtil @Inject constructor() {
      */
     fun decodeForSave(context: Context, uri: Uri, maxDimension: Int): Bitmap? {
         return try {
+            // bounds 模式下 decodeStream 返回 null 是正常行为，不能用它的结果做非空判断
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             context.contentResolver.openInputStream(uri)?.use {
                 BitmapFactory.decodeStream(it, null, bounds)
-            } ?: return null
-            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+            }
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
+                Log.w(TAG, "读取图片尺寸失败: $uri")
+                return null
+            }
 
             val options = BitmapFactory.Options().apply {
                 inSampleSize = calculateInSampleSize(bounds.outWidth, bounds.outHeight, maxDimension)
             }
             val bitmap = context.contentResolver.openInputStream(uri)?.use {
                 BitmapFactory.decodeStream(it, null, options)
-            } ?: return null
+            }
+            if (bitmap == null) {
+                Log.w(TAG, "图片解码失败: $uri")
+                return null
+            }
 
             scaleDown(applyExifRotation(context, uri, bitmap), maxDimension)
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "图片解码异常: ${e.message}")
             null
         }
     }
