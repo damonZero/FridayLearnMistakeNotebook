@@ -7,6 +7,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -101,10 +103,12 @@ fun CameraScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // 有识别结果时收缩预览图，把可视空间让给结果区（避免按钮被顶出屏幕）
+            val previewHeight = if (uiState.ocrResult != null) 180.dp else 300.dp
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(300.dp)
+                    .height(previewHeight)
             ) {
                 if (uiState.capturedImageUri != null) {
                     Image(
@@ -203,13 +207,20 @@ fun CameraScreen(
             when {
                 uiState.ocrResult != null && uiState.ocrResult!!.confidence > 0f -> {
                     Spacer(modifier = Modifier.height(12.dp))
+                    // 结果卡占满剩余空间，长文本在卡片内滚动；"使用此结果"按钮固定可见
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant
                         )
                     ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
+                        Column(
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .verticalScroll(rememberScrollState())
+                        ) {
                             Text(
                                 text = "识别结果",
                                 fontWeight = FontWeight.SemiBold,
@@ -250,14 +261,18 @@ fun CameraScreen(
                 uiState.ocrResult != null && uiState.ocrResult!!.confidence <= 0f -> {
                     Spacer(modifier = Modifier.height(12.dp))
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.errorContainer
                         )
                     ) {
                         Text(
                             text = uiState.ocrResult!!.text,
-                            modifier = Modifier.padding(16.dp),
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .verticalScroll(rememberScrollState()),
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )
                     }
