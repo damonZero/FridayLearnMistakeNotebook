@@ -7,9 +7,10 @@ import androidx.room.PrimaryKey
  * AI 任务类型
  */
 enum class AiTaskType {
-    OCR,           // 文字识别
-    ANALYSIS,      // 错题分析
-    GENERATE       // 生成相似题
+    OCR,              // 文字识别
+    ANALYSIS,         // 错题分析
+    GENERATE,         // 生成相似题
+    SIMILAR_QUESTION  // 相似题练习
 }
 
 /**

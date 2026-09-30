@@ -2,6 +2,8 @@ package com.friday.mistakenotebook.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.friday.mistakenotebook.data.local.MistakeNotebookDatabase
 import com.friday.mistakenotebook.data.local.dao.*
 import dagger.Module
@@ -15,6 +17,13 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
+    // v1 -> v2：错题表新增 AI 分析摘要列
+    private val MIGRATION_1_2 = object : Migration(1, 2) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("ALTER TABLE questions ADD COLUMN aiAnalysis TEXT")
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): MistakeNotebookDatabase {
@@ -23,6 +32,7 @@ object DatabaseModule {
             MistakeNotebookDatabase::class.java,
             MistakeNotebookDatabase.DATABASE_NAME
         )
+            .addMigrations(MIGRATION_1_2)
             // 禁止静默清库：schema 升级必须显式提供 Migration
             .build()
     }

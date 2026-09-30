@@ -357,6 +357,7 @@ fun getTaskTypeName(type: AiTaskType): String {
         AiTaskType.OCR -> "文字识别"
         AiTaskType.ANALYSIS -> "错题分析"
         AiTaskType.GENERATE -> "生成相似题"
+        AiTaskType.SIMILAR_QUESTION -> "相似题练习"
     }
 }
 

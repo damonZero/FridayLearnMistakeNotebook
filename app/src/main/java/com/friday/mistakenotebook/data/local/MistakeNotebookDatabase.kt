@@ -15,7 +15,7 @@ import com.friday.mistakenotebook.data.local.entity.*
         AiConfigEntity::class,
         AiUsageLogEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

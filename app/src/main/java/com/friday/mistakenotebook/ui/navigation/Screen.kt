@@ -37,6 +37,20 @@ sealed class Screen(val route: String) {
         }
     }
 
+    // 错题详情
+    object QuestionDetail : Screen("question/{questionId}") {
+        fun createRoute(questionId: Long): String {
+            return "question/$questionId"
+        }
+    }
+
+    // 相似题练习
+    object Practice : Screen("practice/{questionId}") {
+        fun createRoute(questionId: Long): String {
+            return "practice/$questionId"
+        }
+    }
+
     // 学习统计
     object Stats : Screen("stats")
 

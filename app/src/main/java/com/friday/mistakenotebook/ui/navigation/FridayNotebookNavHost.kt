@@ -9,17 +9,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.friday.mistakenotebook.ui.home.HomeScreen
 import com.friday.mistakenotebook.ui.subject.SubjectsScreen
 import com.friday.mistakenotebook.ui.review.ReviewScreen
 import com.friday.mistakenotebook.ui.settings.SettingsScreen
 import com.friday.mistakenotebook.ui.addquestion.AddQuestionScreen
 import com.friday.mistakenotebook.ui.camera.CameraScreen
+import com.friday.mistakenotebook.ui.questiondetail.QuestionDetailScreen
 import com.friday.mistakenotebook.ui.questionlist.QuestionListScreen
+import com.friday.mistakenotebook.ui.practice.PracticeScreen
 import com.friday.mistakenotebook.ui.stats.StatsScreen
 import com.friday.mistakenotebook.ui.aiconfig.AiConfigScreen
 import com.friday.mistakenotebook.ui.aiusage.AiUsageScreen
@@ -111,6 +115,18 @@ fun FridayNotebookNavHost() {
                     navController = navController,
                     subjectId = if (subjectId == -1L) null else subjectId
                 )
+            }
+            composable(
+                Screen.QuestionDetail.route,
+                arguments = listOf(navArgument("questionId") { type = NavType.LongType })
+            ) {
+                QuestionDetailScreen(navController = navController)
+            }
+            composable(
+                Screen.Practice.route,
+                arguments = listOf(navArgument("questionId") { type = NavType.LongType })
+            ) {
+                PracticeScreen(navController = navController)
             }
             composable(Screen.Stats.route) {
                 StatsScreen(navController = navController)

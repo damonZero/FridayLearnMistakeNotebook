@@ -15,6 +15,7 @@ data class Question(
     val userAnswer: String = "",
     val errorType: ErrorType = ErrorType.UNKNOWN,
     val imagePath: String? = null,
+    val aiAnalysis: String? = null,
     val leitnerBox: Int = 1,
     val easeFactor: Float = 2.5f,
     val intervalDays: Int = 1,
