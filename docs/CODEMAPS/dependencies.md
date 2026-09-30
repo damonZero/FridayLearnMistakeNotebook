@@ -1,4 +1,4 @@
-<!-- Generated: 2026-09-27 | Files scanned: 3 (build.gradle.kts x2, manifest) | Token estimate: ~450 -->
+<!-- Generated: 2026-09-30 | Files scanned: 5 | Token estimate: ~420 -->
 
 # 依赖清单
 
@@ -9,35 +9,31 @@
 | 构建 | Kotlin + AGP, compileSdk/targetSdk 34, minSdk 26, JDK 17 | — |
 | UI | Compose BOM + Material3 + icons-extended + animation | 2024.02.00 |
 | 架构 | Navigation-Compose / Lifecycle-ViewModel-Compose | 2.7.6 / 2.7.0 |
-| DI | Hilt Android + hilt-navigation-compose (KSP) | 2.50 / 1.1.0 |
-| 数据 | Room runtime/ktx/compiler (KSP) | 2.6.1 |
+| DI | Hilt (KSP) + hilt-navigation-compose | 2.50 / 1.1.0 |
+| 数据 | Room runtime/ktx/compiler (KSP, schemaLocation=schemas/) | 2.6.1 |
 | 异步 | kotlinx-coroutines-android | 1.7.3 |
-| 偏好 | DataStore-Preferences | 1.0.0 |
-| 序列化 | Gson | 2.10.1 |
-| 相机 | CameraX core/camera2/lifecycle/view | 1.3.1 |
-| 图片 | Coil-Compose | 2.5.0 |
-| 网络 | OkHttp + logging-interceptor | 4.12.0 |
-| 测试 | JUnit4, mockito-kotlin, coroutines-test; androidTest: Espresso + Compose UI test | — |
-
-编译期处理：KSP（Room + Hilt 编译器）；Compose 编译器扩展 1.5.8。
+| 序列化 | Gson（识题/举一反三 JSON 编解码亦用） | 2.10.1 |
+| 相机/图片 | CameraX 1.3.1 / Coil-Compose 2.5.0 / exifinterface 1.3.7 | — |
+| 网络 | OkHttp + logging-interceptor（AI 调用全走此处） | 4.12.0 |
+| PDF | android.graphics.pdf.PdfDocument + StaticLayout（系统内置，零三方依赖） | — |
+| 测试 | JUnit4, mockito-kotlin, coroutines-test; CI: GitHub Actions (Temurin 17) | — |
 
 ## 外部服务
 
-- **DeepSeek 官方 API（默认）** — 识图 `deepseek-v4-flash-vision-exp`、推理 `deepseek-v4-flash`，OpenAI 兼容 `/chat/completions`
-- **火山方舟（备选模板）** — 豆包 Vision，同协议；两者均由内置供应商模板预填 baseUrl/推荐模型，Key 由用户在 ai_configs 表填写
-- 无其他第三方服务；无 Analytics / Crash 上报
+- **DeepSeek 官方 API（默认模板）** — `deepseek-flash`（V4.1 原生多模态）识图+推理统一；baseUrl `https://api.deepseek.com`
+- **火山方舟（备选模板）** — 豆包 Vision；同 OpenAI 兼容协议
+- Key 由用户填写；计费估算按模型名匹配（供应商自由文本不参与）
 
-## Android 权限（AndroidManifest.xml）
+## Android 权限
 
-- `CAMERA`（uses-feature required=false）
-- `READ_MEDIA_IMAGES`；`READ/WRITE_EXTERNAL_STORAGE`（限 SDK ≤32 / ≤28）
-- `INTERNET` + `ACCESS_NETWORK_STATE`
+CAMERA（required=false）/ READ_MEDIA_IMAGES / 旧存储权限(≤32/≤28) / INTERNET + ACCESS_NETWORK_STATE
 
-## 组件（Manifest）
+## 组件
 
-- `FridayNotebookApp`（@HiltAndroidApp）+ `MainActivity`（LAUNCHER，单 Activity）
-- FileProvider（authorities `${applicationId}.fileprovider`，paths 配置于 `res/xml/file_paths.xml`）— 拍照照片 URI 共享
+- FridayNotebookApp（@HiltAndroidApp + 孤儿图片清扫）
+- MainActivity（单 Activity + onStop 自动备份）
+- FileProvider（cache / files/images / **files/exports**——练习卷 PDF 分享用）
 
 ## 版本控制注意
 
-仓库含 `周周错题本-debug.apk`（19MB，已提交在历史中）与 `app/build/` 构建产物；`.gitignore` 已加 `*.apk`。
+schemas/1~4.json 迁移基线入库；.gitignore 排除 .omo/.reports/*.apk

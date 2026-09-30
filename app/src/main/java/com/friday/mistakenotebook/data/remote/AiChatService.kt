@@ -274,7 +274,7 @@ class AiChatService @Inject constructor(
             appendLine("""{"knowledgePoints": ["知识点1", "知识点2"], "errorTypeGuess": "错误原因的简短描述", "analysis": "详细分析：涉及的知识点、错因、正确解法"}""")
         }
 
-        return chat(AiTaskType.ANALYSIS, prompt, maxTokens = 4096).mapCatching { content ->
+        return chat(AiTaskType.ANALYSIS, prompt, maxTokens = 8192).mapCatching { content ->
             parseKnowledgeAnalysis(content)
                 ?: throw IllegalStateException("AI 返回的分析内容无法解析，请重试")
         }
@@ -304,15 +304,15 @@ class AiChatService @Inject constructor(
             }
             appendLine()
             appendLine("要求：难度与原题相近，不引入超纲概念；数学应用题的情境要贴近小学生生活、叙述方式可以大胆变换；语言简洁清楚，适合小学生独立阅读。")
+            appendLine("如果原题包含多个小问（如 (1)(2)）：优先针对其中最核心或学生最可能出错的小问出题，也可以出一道把多小问要素整合在一起的综合变式；题干保持清晰的小问编号结构。")
             appendLine()
             appendLine("请只输出一个 JSON 数组，不要输出任何其他文字或代码块标记，每个元素格式：")
             appendLine("""{"content": "题目内容", "answer": "答案与简要思路", "variation": "同型巩固"}""")
             appendLine("其中 variation 只能填：同型巩固 / 情境变换 / 逆向综合；answer 不能为空，必须先给出最终答案，再附 1~2 句简要思路")
         }
 
-        // 思考型模型（deepseek-flash）会先消耗大量输出预算在推理上，
-        // 2048 常常导致正文为空——生成类调用统一放宽到 4096
-        return chat(AiTaskType.SIMILAR_QUESTION, prompt, maxTokens = 4096).mapCatching { content ->
+        // 思考型模型推理消耗大，多小问长题干的输出也长，预算放宽到 8192
+        return chat(AiTaskType.SIMILAR_QUESTION, prompt, maxTokens = 8192).mapCatching { content ->
             parseGeneratedQuestions(content)
                 ?: throw IllegalStateException("AI 返回的相似题内容无法解析，请重试")
         }
@@ -330,10 +330,16 @@ class AiChatService @Inject constructor(
             appendLine("3. 给出正确答案与解析：尽量提供两种以上解法思路（用 1. 2. 编号区分），语言适合小学生理解")
             appendLine("4. 判断这道题考查的核心知识点，用 2~8 个字的短语概括（例如：鸡兔同笼、分数加减、单位换算、多边形面积）")
             appendLine()
+            appendLine("重要——如果原题是一道大题包含多个小问（如 (1)(2)(3)）：")
+            appendLine("- content 必须完整保留题干和全部小问及其编号，不要遗漏、不要合并")
+            appendLine("- userAnswer 按小问分别提取学生的手写作答，用 (1)(2) 标注对应关系")
+            appendLine("- answer 按小问分别给出正确答案与解法，同样用 (1)(2) 标注，每个小问尽量给出多种解法")
+            appendLine()
             appendLine("请只输出一个 JSON 对象，不要输出任何其他文字或代码块标记，格式：")
             appendLine("""{"content": "题目内容", "userAnswer": "学生的答案，没有则留空", "answer": "正确答案与多种解法思路", "knowledgePoint": "核心知识点短语"}""")
         }
-        return chatWithImage(AiTaskType.OCR, imageBase64, prompt, maxTokens = 4096).mapCatching { content ->
+        // 思考型模型推理消耗大，多小问长题干的 JSON 输出也长，预算放宽到 8192
+        return chatWithImage(AiTaskType.OCR, imageBase64, prompt, maxTokens = 8192).mapCatching { content ->
             parseQuestionExtraction(content)
                 ?: throw IllegalStateException("AI 返回的识题内容无法解析，请重试")
         }

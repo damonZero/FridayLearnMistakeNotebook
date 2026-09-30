@@ -128,7 +128,7 @@ class VolcanoOcrService @Inject constructor(
                     ]
                 }
             ],
-            "max_tokens": 2048
+            "max_tokens": 4096
         }
         """.trimIndent()
     }

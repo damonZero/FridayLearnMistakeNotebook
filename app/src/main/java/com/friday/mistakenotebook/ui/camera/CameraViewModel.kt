@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -124,6 +125,9 @@ class CameraViewModel @Inject constructor(
                 val failure = extraction.exceptionOrNull()
                 val isParseFailure = failure is IllegalStateException &&
                     failure.message?.contains("无法解析") == true
+                val isEmptyContent = failure is IOException &&
+                    (failure.message?.contains("格式异常") == true ||
+                        failure.message?.contains("未找到回复") == true)
                 if (extraction.isSuccess) {
                     val ex = extraction.getOrThrow()
                     Log.d("OCR_CAMERA", "AI 识题成功: content=${ex.content.take(50)}...")
@@ -131,9 +135,9 @@ class CameraViewModel @Inject constructor(
                     answer = ex.answer
                     userAnswer = ex.userAnswer
                     knowledgePoint = ex.knowledgePoint
-                } else if (isParseFailure) {
-                    // 网络通了但返回结构无法解析：回退纯 OCR 拿原始文本仍有价值
-                    Log.w("OCR_CAMERA", "AI 识题解析失败，回退纯 OCR: ${failure?.message}")
+                } else if (isParseFailure || isEmptyContent) {
+                    // 结构化输出失败但网络通：回退纯 OCR 拿原始文本仍有价值
+                    Log.w("OCR_CAMERA", "AI 识题输出异常，回退纯 OCR: ${failure?.message}")
                     result = ocrService.recognizeText(base64)
                     if (seq != captureSeq) return@launch
                 } else {

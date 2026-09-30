@@ -1,62 +1,57 @@
-<!-- Generated: 2026-09-27 | Files scanned: 30 | Token estimate: ~750 -->
+<!-- Generated: 2026-09-30 | Files scanned: 45 | Token estimate: ~850 -->
 
-# 数据与业务层（Android 无服务器，本文档对应 domain + data 层）
+# 数据与业务层（domain + data 层）
 
-## 远程服务
+## 远程服务（AiChatService，OpenAI 兼容 /chat/completions）
 
 ```
-VolcanoOcrService.recognizeText(imageBase64) : OcrResult
-  → 读取 AiConfigDao.getEnabledConfigByTaskType(OCR)  // Key/BaseUrl/Model 用户配置
-  → POST {baseUrl}/chat/completions  (OpenAI 兼容, Bearer 认证, 瞬时错误重试1次)
-  → OcrResponseParser.parse() → OcrResult(text, confidence, textBlocks)
-  → 解析 usage.tokens → aiUsageLogDao.insertUsageLog（费用按模型名估算，失败不影响识别）
+chat(taskType, prompt)                    文本对话（分析/出题）
+chatWithImage(taskType, base64, prompt)   图文混合（识题）
+内部：resolveConfig(SIMILAR_QUESTION 兼容旧 GENERATE) → 互斥单飞重试×2
+     → extractContent（兼容分段数组；正文空→报错，不读思考文本）
+     → AiUsageLogger.log（token/费用按模型名估算，供应商名不参与计价）
+max_tokens=8192（思考型模型推理 + 多小问长 JSON）
 
-AiChatService (data/remote/AiChatService.kt)
-  → chat(taskType, prompt) / chatWithImage(taskType, imageBase64, prompt)，按任务类型读配置
-  → analyzeQuestionImage(image) → QuestionExtraction(题干/学生作答/多解法参考答案)——拍照录入预填表单
-  → analyzeKnowledge(...) → KnowledgeAnalysis(知识点/错因/分析)
-  → generateSimilarQuestions(...) → List<GeneratedQuestion>（练习模式/复习页"举一反三"）
+analyzeQuestionImage(image) → QuestionExtraction{content, userAnswer, answer, knowledgePoint}
+  多小问大题：content 完整保留 (1)(2) 编号；userAnswer/answer 按小问分组
+analyzeKnowledge(...)      → KnowledgeAnalysis{knowledgePoints, errorTypeGuess, analysis}
+generateSimilarQuestions() → List<GeneratedQuestion>{content, answer, variation}
+  梯度：①同型巩固 ②情境变换 ③逆向综合；多小问原题优先针对核心小问
+SimilarQuestionCodec       ↔ questions.similarQuestions JSON 列编解码
 ```
 
-AI 分析结果存 questions.aiAnalysis（详情页展示/重分析覆盖）；相似题仅练习会话内使用不入库。
+## 用例 → 仓库 → DAO（主要链路）
 
-## 用例 → 仓库 → DAO 映射
-
-| UseCase (`domain/usecase/`) | Repository 方法 | DAO |
+| UseCase | Repository | DAO |
 |---|---|---|
-| AddQuestionUseCase | QuestionRepository.addQuestion | QuestionDao.insertQuestion |
-| GetQuestionsForReviewUseCase | getQuestionsForReview | QuestionDao.getQuestionsForReview(now) |
-| ProcessReviewResultUseCase | processReviewResult | QuestionDao.updateQuestion（经算法计算） |
-| GetAllSubjectsUseCase | SubjectRepository.getAllSubjects | SubjectDao.getAllSubjects |
-| AddSubjectUseCase | addSubject | SubjectDao.insertSubject |
-| DeleteSubjectUseCase | deleteSubject | SubjectDao.deleteSubjectById（含删除保护：预设科目拒绝） |
+| AddQuestionUseCase(+knowledgePoint) | addQuestion | insertQuestion |
+| GetQuestionsForReviewUseCase | getQuestionsForReview | getQuestionsForReview(dueUntil=明日0点, 分钟时钟) |
+| ProcessReviewResultUseCase | processReviewResult | updateQuestion（经算法） |
+| Subject 三件套 | SubjectRepository | SubjectDao（isPreset 删除保护） |
 
-## 算法 — `domain/algorithm/SpacedRepetitionAlgorithm.kt`（object 纯函数）
+直接方法（_repository 直连）：getBoxCounts[/BySubject]、getTodayDueCount[BySubject]、
+updateAnalysis(id, aiAnalysis, knowledgePoint)、updateSimilarQuestions(id, json)、searchQuestions
 
-- `calculateNextReview(question, score)` — score 先钳制 1..5
-  - 答错（score<3）：盒→1，EF 公式下调（≥1.3），**间隔固定 1 天**（答错次日必现）
-  - 答对（score≥3）：盒→min(box+1,5)，EF 夹在 [1.3, 2.5]，间隔=round(基础间隔×EF)
-  - 基础间隔：盒1=1天 盒2=2天 盒3=4天 盒4=7天 盒5=15天
-- `getBoxDescription(box)` / `getMasteryPercentage(box)`
-- 待复习查询时间源：Repository 内每分钟重发 endOfToday（当天到期即算，跨午夜自动刷新）
+## 算法 — SpacedRepetitionAlgorithm
 
-## 备份 — `data/backup/BackupManager.kt`
+score 钳制 1..5；答错→盒1固定次日；答对→盒+1(≤5)、间隔=round(基础[1,2,4,7,15]×EF)、EF∈[1.3,2.5]
 
-- `BackupData v2` 强类型：全部 6 张表（subjects/chapters/knowledgePoints/questions/aiConfigs/aiUsageLogs），导出时 aiConfigs 的 apiKey 置空脱敏
-- `exportToJson()/exportToFile()/exportToUri(uri)`（SAF 导出到用户选择位置，事务内读快照）
-- `importFromJson/importFromFile` 真实现：version 校验 → 按 FK 顺序逐表 upsert（同 id 覆盖，aiConfigs 空 key 时保留本地 key）→ 返回含统计的 ImportResult
-- `autoBackup()` — MainActivity.onStop 触发，返回 Boolean 如实记录；`getBackupFiles()/deleteBackup()`
+## 备份 — BackupManager（v2 全 6 表）
 
-## AI 连通性 — `data/remote/AiConnectivityTester.kt`
+导出（事务内读，apiKey 置空）/ 导入（FK 序 upsert，v2 校验）/ autoBackup(onStop) / SAF 导出
 
-- `testConnection(baseUrl, apiKey, modelName)`：最小 chat/completions 探测（max_tokens=1），401/404/429/超时映射中文提示，供 AiConfig 连接测试真实调用
+## 纸质练习卷 — print/PracticeSheetPdfGenerator
 
-## 工具 — `util/ImageUtil.kt`（object）
+```
+generate(items: List<SheetItem>, includeSimilar, title) : SheetFiles{练习卷, 答案卷}  [Mutex 单飞]
+  Writer：A4 595×842pt，StaticLayout 按行界分页（不截行），页脚每页绘制
+  练习卷：题干+原图(compress采样)+纯空白作答区+签名栏
+  答案卷：正确答案 → 举一反三答案 → AI 分析 → 孩子上次记录 + 记录栏
+shareSheetFile(ctx, file)   单文件 ACTION_SEND（微信文件通道；多文件 SEND_MULTIPLE 微信不收）
+printExerciseSheet(ctx, f)  PrintManager + 文件拷贝 Adapter（ISO_A4）
+文件名分钟戳 + exists 碰撞追加序号；writeTo use + try/finally
+```
 
-`uriToBase64` / `bitmapToBase64` / `compressBitmap(1920×1080)` / `saveImageToLocal` / `loadLocalImage`
+## DI（`di/`）
 
-## DI 模块（`di/`，均 SingletonComponent）
-
-- `DatabaseModule` — Room 实例 + 6 DAO 提供
-- `RepositoryModule` — `@Binds` 接口→Impl
-- `AppModule` / `GsonModule` — OkHttp、Gson、Context
+DatabaseModule（v4 + 3 个 Migration）/ RepositoryModule（@Binds）/ AppModule、GsonModule

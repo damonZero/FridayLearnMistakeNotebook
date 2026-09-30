@@ -57,11 +57,34 @@ class ImageUtil @Inject constructor() {
 
             val rotated = applyExifRotation(context, uri, bitmap)
             val scaled = scaleDown(rotated, MAX_DIMENSION)
-            bitmapToBase64(scaled)
+            // 极端长宽比（竖长小票/试卷切图 >2:1）：保证短边不低于 1024，
+            // 否则等比缩放后文字过小、视觉模型识别率骤降
+            val ocrReady = fitExtremeAspect(scaled)
+            bitmapToBase64(ocrReady)
         } catch (e: Exception) {
             Log.e(TAG, "图片转 Base64 异常: ${e.message}")
             null
         }
+    }
+
+    /**
+     * 极端长宽比矫正：长宽比 >2:1 时把短边放大到 1024（长边上限 4096）。
+     * 动态分辨率视觉模型对像素多的区域分配更多编码，放大能显著提升竖长图的可读性
+     */
+    private fun fitExtremeAspect(bitmap: Bitmap): Bitmap {
+        val longSide = maxOf(bitmap.width, bitmap.height)
+        val shortSide = minOf(bitmap.width, bitmap.height)
+        if (longSide / shortSide.toFloat() <= 2f || shortSide >= 1024) return bitmap
+
+        var scale = 1024f / shortSide
+        val newLong = (longSide * scale).toInt()
+        if (newLong > 4096) scale *= 4096f / newLong
+        return Bitmap.createScaledBitmap(
+            bitmap,
+            (bitmap.width * scale).toInt().coerceAtLeast(1),
+            (bitmap.height * scale).toInt().coerceAtLeast(1),
+            true
+        )
     }
 
     /**
