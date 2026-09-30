@@ -3,6 +3,8 @@ package com.friday.mistakenotebook.ui.aiconfig
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -231,7 +233,11 @@ fun AiConfigDialog(
             Text(if (uiState.editingConfig != null) "编辑配置" else "添加配置")
         },
         text = {
-            Column {
+            // 字段多，小屏/横屏下 AlertDialog 默认不滚动会裁切内容
+            Column(
+                modifier = Modifier
+                    .verticalScroll(rememberScrollState())
+            ) {
                 // 供应商快捷模板：一键预填 Base URL 与推荐模型；选中态=最近应用的模板
                 Row(
                     modifier = Modifier.fillMaxWidth(),

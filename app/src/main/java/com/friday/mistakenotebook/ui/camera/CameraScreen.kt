@@ -103,8 +103,9 @@ fun CameraScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 有识别结果时收缩预览图，把可视空间让给结果区（避免按钮被顶出屏幕）
-            val previewHeight = if (uiState.ocrResult != null) 180.dp else 300.dp
+            // 有识别结果时收缩预览图，把可视空间让给结果区（避免按钮被顶出屏幕）；
+            // 无结果 240dp 留出提示/错误卡余量
+            val previewHeight = if (uiState.ocrResult != null) 180.dp else 240.dp
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
