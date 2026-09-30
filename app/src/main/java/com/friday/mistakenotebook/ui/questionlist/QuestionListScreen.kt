@@ -134,7 +134,9 @@ fun QuestionListScreen(
                     items(uiState.questions) { question ->
                         QuestionCard(
                             question = question,
-                            onClick = { /* TODO: 查看详情 */ },
+                            onClick = {
+                                navController.navigate(Screen.QuestionDetail.createRoute(question.id))
+                            },
                             onDelete = { viewModel.deleteQuestion(question.id) }
                         )
                     }
