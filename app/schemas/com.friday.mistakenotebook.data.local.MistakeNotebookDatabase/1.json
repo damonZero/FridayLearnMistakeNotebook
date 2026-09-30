@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "51bb3455cfc99b6546c82df9baf4087b",
+    "identityHash": "86e5f670955d78539d77db5c1239f535",
     "entities": [
       {
         "tableName": "subjects",
@@ -182,7 +182,7 @@
       },
       {
         "tableName": "questions",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `subjectId` INTEGER NOT NULL, `chapterId` INTEGER, `knowledgePointId` INTEGER, `content` TEXT NOT NULL, `answer` TEXT NOT NULL, `userAnswer` TEXT NOT NULL, `errorType` TEXT NOT NULL, `imagePath` TEXT, `aiAnalysis` TEXT, `leitnerBox` INTEGER NOT NULL, `easeFactor` REAL NOT NULL, `intervalDays` INTEGER NOT NULL, `streak` INTEGER NOT NULL, `reviewCount` INTEGER NOT NULL, `nextReviewDate` INTEGER NOT NULL, `lastReviewDate` INTEGER, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, FOREIGN KEY(`subjectId`) REFERENCES `subjects`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`chapterId`) REFERENCES `chapters`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL , FOREIGN KEY(`knowledgePointId`) REFERENCES `knowledge_points`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `subjectId` INTEGER NOT NULL, `chapterId` INTEGER, `knowledgePointId` INTEGER, `content` TEXT NOT NULL, `answer` TEXT NOT NULL, `userAnswer` TEXT NOT NULL, `errorType` TEXT NOT NULL, `imagePath` TEXT, `leitnerBox` INTEGER NOT NULL, `easeFactor` REAL NOT NULL, `intervalDays` INTEGER NOT NULL, `streak` INTEGER NOT NULL, `reviewCount` INTEGER NOT NULL, `nextReviewDate` INTEGER NOT NULL, `lastReviewDate` INTEGER, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, FOREIGN KEY(`subjectId`) REFERENCES `subjects`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`chapterId`) REFERENCES `chapters`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL , FOREIGN KEY(`knowledgePointId`) REFERENCES `knowledge_points`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
         "fields": [
           {
             "fieldPath": "id",
@@ -235,12 +235,6 @@
           {
             "fieldPath": "imagePath",
             "columnName": "imagePath",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "aiAnalysis",
-            "columnName": "aiAnalysis",
             "affinity": "TEXT",
             "notNull": false
           },
@@ -507,7 +501,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '51bb3455cfc99b6546c82df9baf4087b')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '86e5f670955d78539d77db5c1239f535')"
     ]
   }
 }

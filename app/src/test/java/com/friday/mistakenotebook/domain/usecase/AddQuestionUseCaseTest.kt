@@ -108,6 +108,7 @@ class FakeQuestionRepository : QuestionRepository {
     override fun getBoxCounts(): kotlinx.coroutines.flow.Flow<Map<Int, Int>> = kotlinx.coroutines.flow.flowOf(emptyMap())
     override suspend fun getQuestionById(id: Long): com.friday.mistakenotebook.domain.model.Question? = null
     override suspend fun updateQuestion(question: com.friday.mistakenotebook.domain.model.Question) {}
+    override suspend fun updateAiAnalysis(id: Long, aiAnalysis: String?) {}
     override suspend fun deleteQuestion(id: Long) {}
     override suspend fun processReviewResult(result: com.friday.mistakenotebook.domain.model.ReviewResult) {}
     override fun searchQuestions(query: String): kotlinx.coroutines.flow.Flow<List<com.friday.mistakenotebook.domain.model.Question>> = kotlinx.coroutines.flow.flowOf(emptyList())

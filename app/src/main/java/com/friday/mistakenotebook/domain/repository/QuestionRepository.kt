@@ -37,6 +37,9 @@ interface QuestionRepository {
 
     suspend fun updateQuestion(question: Question)
 
+    /** 只更新 AI 分析摘要列（详情页分析结果落库用） */
+    suspend fun updateAiAnalysis(id: Long, aiAnalysis: String?)
+
     suspend fun deleteQuestion(id: Long)
 
     suspend fun processReviewResult(result: ReviewResult)

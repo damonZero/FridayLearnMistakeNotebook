@@ -38,9 +38,13 @@ data class GeneratedQuestion(
 
 /**
  * 通用 AI 文本对话服务：按任务类型读取启用配置，POST {baseUrl}/chat/completions（OpenAI 兼容）。
+ * 所有计费调用统一写用量日志（含失败记 0），瞬时网络错误自动重试一次。
  */
 @Singleton
-class AiChatService @Inject constructor(private val aiConfigDao: AiConfigDao) {
+class AiChatService @Inject constructor(
+    private val aiConfigDao: AiConfigDao,
+    private val usageLogger: AiUsageLogger
+) {
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
@@ -53,75 +57,109 @@ class AiChatService @Inject constructor(private val aiConfigDao: AiConfigDao) {
      */
     suspend fun chat(taskType: AiTaskType, userPrompt: String, maxTokens: Int = 2048): Result<String> {
         return withContext(Dispatchers.IO) {
-            try {
-                val config = aiConfigDao.getEnabledConfigByTaskType(taskType)
-                    ?: return@withContext Result.failure(
-                        IllegalStateException("请先在设置中配置该任务的 AI 模型")
-                    )
-
-                val jsonBody = JsonObject().apply {
-                    addProperty("model", config.modelName)
-                    add(
-                        "messages",
-                        JsonArray().apply {
-                            add(
-                                JsonObject().apply {
-                                    addProperty("role", "user")
-                                    addProperty("content", userPrompt)
-                                }
-                            )
-                        }
-                    )
-                    addProperty("max_tokens", maxTokens)
-                }
-
-                val request = Request.Builder()
-                    .url("${config.baseUrl.trimEnd('/')}/chat/completions")
-                    .addHeader("Content-Type", "application/json")
-                    .addHeader("Authorization", "Bearer ${config.apiKey}")
-                    .post(jsonBody.toString().toRequestBody("application/json".toMediaType()))
-                    .build()
-
-                client.newCall(request).execute().use { response ->
-                    if (!response.isSuccessful) {
-                        val message = when {
-                            response.code == 401 || response.code == 403 ->
-                                "API Key 无效或无权限"
-                            response.code == 404 ->
-                                "地址或模型名错误，请检查 baseUrl（一般以 /v1 结尾）与模型名"
-                            response.code == 429 ->
-                                "调用频率超限，请稍后再试"
-                            else ->
-                                "服务返回 HTTP ${response.code}"
-                        }
-                        return@withContext Result.failure(IOException(message))
-                    }
-
-                    val body = response.body?.string()
-                        ?: return@withContext Result.failure(IOException("服务返回为空"))
-
-                    val content = extractContent(body)
-                        ?: return@withContext Result.failure(
-                            IOException("AI 返回格式异常，未找到回复内容，请重试")
-                        )
-
-                    Result.success(content)
-                }
-            } catch (e: SocketTimeoutException) {
-                Result.failure(IOException("网络错误：连接超时"))
-            } catch (e: UnknownHostException) {
-                Result.failure(IOException("网络错误：无法解析地址，请检查 baseUrl"))
-            } catch (e: ConnectException) {
-                Result.failure(IOException("网络错误：无法连接服务器"))
-            } catch (e: IllegalArgumentException) {
-                // OkHttp 对非法 URL 抛 IllegalArgumentException
-                Result.failure(IOException("网络错误：地址格式不正确，请检查 baseUrl"))
-            } catch (e: IOException) {
-                Result.failure(IOException("网络错误：${e.message ?: "请求失败"}"))
-            } catch (e: Exception) {
-                Result.failure(IOException("请求失败：${e.message ?: "未知错误"}"))
-            }
+            val config = resolveConfig(taskType)
+                ?: return@withContext Result.failure(
+                    IllegalStateException("请先在设置中配置该任务的 AI 模型")
+                )
+            chatInternal(config, taskType, userPrompt, maxTokens)
         }
+    }
+
+    /** SIMILAR_QUESTION 向下兼容更名前的 GENERATE 配置，避免老用户配好的槽位读不到 */
+    private suspend fun resolveConfig(taskType: AiTaskType) = when (taskType) {
+        AiTaskType.SIMILAR_QUESTION ->
+            aiConfigDao.getEnabledConfigByTaskType(AiTaskType.SIMILAR_QUESTION)
+                ?: aiConfigDao.getEnabledConfigByTaskType(AiTaskType.GENERATE)
+        else -> aiConfigDao.getEnabledConfigByTaskType(taskType)
+    }
+
+    private suspend fun chatInternal(
+        config: com.friday.mistakenotebook.data.local.entity.AiConfigEntity,
+        taskType: AiTaskType,
+        userPrompt: String,
+        maxTokens: Int
+    ): Result<String> {
+        return try {
+            val jsonBody = JsonObject().apply {
+                addProperty("model", config.modelName)
+                add(
+                    "messages",
+                    JsonArray().apply {
+                        add(
+                            JsonObject().apply {
+                                addProperty("role", "user")
+                                addProperty("content", userPrompt)
+                            }
+                        )
+                    }
+                )
+                addProperty("max_tokens", maxTokens)
+            }
+
+            val request = Request.Builder()
+                .url("${config.baseUrl.trimEnd('/')}/chat/completions")
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Authorization", "Bearer ${config.apiKey}")
+                .post(jsonBody.toString().toRequestBody("application/json".toMediaType()))
+                .build()
+
+            executeWithRetry(client, request).use { response ->
+                if (!response.isSuccessful) {
+                    usageLogger.log(config, taskType, 0, 0)
+                    val message = when {
+                        response.code == 401 || response.code == 403 ->
+                            "API Key 无效或无权限"
+                        response.code == 404 ->
+                            "地址或模型名错误，请检查 baseUrl（一般以 /v1 结尾）与模型名"
+                        response.code == 429 ->
+                            "调用频率超限，请稍后再试"
+                        else ->
+                            "服务返回 HTTP ${response.code}"
+                    }
+                    return Result.failure(IOException(message))
+                }
+
+                val body = response.body?.string()
+                if (body == null) {
+                    usageLogger.log(config, taskType, 0, 0)
+                    return Result.failure(IOException("服务返回为空"))
+                }
+
+                val usage = parseUsageTokens(body)
+                val content = extractContent(body)
+                usageLogger.log(config, taskType, usage.first, usage.second)
+
+                content?.let { Result.success(it) }
+                    ?: Result.failure(IOException("AI 返回格式异常，未找到回复内容，请重试"))
+            }
+        } catch (e: Exception) {
+            usageLogger.log(config, taskType, 0, 0)
+            Result.failure(IOException(mapNetworkError(e)))
+        }
+    }
+
+    /** 解析 usage.prompt_tokens / completion_tokens，缺失按 0 记，不影响主流程 */
+    private fun parseUsageTokens(responseBody: String): Pair<Int, Int> {
+        return try {
+            val usage = JsonParser.parseString(responseBody).asJsonObject.getAsJsonObject("usage")
+                ?: return 0 to 0
+            fun read(name: String): Int =
+                usage.get(name)?.takeIf { it.isJsonPrimitive }?.asInt ?: 0
+            read("prompt_tokens") to read("completion_tokens")
+        } catch (e: Exception) {
+            0 to 0
+        }
+    }
+
+    private fun mapNetworkError(e: Exception): String = when (e) {
+        is SocketTimeoutException -> "网络错误：连接超时"
+        is UnknownHostException -> "网络错误：无法解析地址，请检查 baseUrl"
+        is ConnectException -> "网络错误：无法连接服务器"
+        is IllegalArgumentException ->
+            // OkHttp 对非法 URL 抛 IllegalArgumentException
+            "网络错误：地址格式不正确，请检查 baseUrl"
+        is IOException -> "网络错误：${e.message ?: "请求失败"}"
+        else -> "请求失败：${e.message ?: "未知错误"}"
     }
 
     /**

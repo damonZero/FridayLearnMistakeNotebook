@@ -45,6 +45,10 @@ interface QuestionDao {
     @Query("SELECT leitnerBox, COUNT(*) AS count FROM questions GROUP BY leitnerBox")
     fun getBoxCounts(): Flow<List<BoxCount>>
 
+    /** 只更新 AI 分析列，避免整行回写覆盖分析期间发生的复习排期变更 */
+    @Query("UPDATE questions SET aiAnalysis = :aiAnalysis WHERE id = :id")
+    suspend fun updateAiAnalysis(id: Long, aiAnalysis: String?)
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertQuestion(question: QuestionEntity): Long
 

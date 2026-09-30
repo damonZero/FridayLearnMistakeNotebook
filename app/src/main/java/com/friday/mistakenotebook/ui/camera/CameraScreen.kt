@@ -149,6 +149,7 @@ fun CameraScreen(
                             permissionLauncher.launch(Manifest.permission.CAMERA)
                         }
                     },
+                    enabled = !uiState.isProcessing,
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(Icons.Default.CameraAlt, contentDescription = null)
@@ -158,6 +159,7 @@ fun CameraScreen(
 
                 OutlinedButton(
                     onClick = { pickImageLauncher.launch("image/*") },
+                    enabled = !uiState.isProcessing,
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(Icons.Default.PhotoLibrary, contentDescription = null)

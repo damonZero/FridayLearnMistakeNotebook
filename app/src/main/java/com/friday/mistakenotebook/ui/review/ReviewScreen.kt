@@ -158,17 +158,20 @@ fun ReviewContent(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // 拍照识别保存的题目原图，放在题面文字上方；无图不占位
+                    // 拍照识别保存的题目原图，放在题面文字上方；无图或文件已不存在（如换机恢复）不占位
                     question.imagePath?.let { path ->
-                        Image(
-                            painter = rememberAsyncImagePainter(File(path)),
-                            contentDescription = "题目原图",
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = 200.dp),
-                            contentScale = ContentScale.Fit
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        val imageFile = remember(path) { File(path) }
+                        if (imageFile.exists()) {
+                            Image(
+                                painter = rememberAsyncImagePainter(imageFile),
+                                contentDescription = "题目原图",
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 200.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
                     }
 
                     Text(

@@ -63,10 +63,15 @@ class QuestionDetailViewModel @Inject constructor(
                 userAnswer = question.userAnswer.takeIf { it.isNotBlank() },
                 correctAnswer = question.answer.takeIf { it.isNotBlank() }
             ).onSuccess { analysis ->
-                val updated = question.copy(aiAnalysis = buildAnalysisSummary(analysis))
-                questionRepository.updateQuestion(updated)
+                // 只写 aiAnalysis 列：整行回写会把分析期间发生的复习排期变更（盒/间隔/日期）回滚掉
+                questionRepository.updateAiAnalysis(questionId, buildAnalysisSummary(analysis))
+                val fresh = questionRepository.getQuestionById(questionId)
                 _uiState.update {
-                    it.copy(question = updated, analysis = analysis, isAnalyzing = false)
+                    it.copy(
+                        question = fresh ?: question.copy(aiAnalysis = buildAnalysisSummary(analysis)),
+                        analysis = analysis,
+                        isAnalyzing = false
+                    )
                 }
             }.onFailure { e ->
                 _uiState.update {

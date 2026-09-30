@@ -1,5 +1,7 @@
 package com.friday.mistakenotebook.data.repository
 
+import android.content.Context
+import android.util.Log
 import com.friday.mistakenotebook.data.local.dao.QuestionDao
 import com.friday.mistakenotebook.data.local.entity.ErrorType
 import com.friday.mistakenotebook.data.local.entity.QuestionEntity
@@ -7,12 +9,14 @@ import com.friday.mistakenotebook.domain.algorithm.SpacedRepetitionAlgorithm
 import com.friday.mistakenotebook.domain.model.Question
 import com.friday.mistakenotebook.domain.model.ReviewResult
 import com.friday.mistakenotebook.domain.repository.QuestionRepository
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import java.io.File
 import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
@@ -21,6 +25,7 @@ import javax.inject.Singleton
 @OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
 class QuestionRepositoryImpl @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val questionDao: QuestionDao
 ) : QuestionRepository {
 
@@ -112,8 +117,30 @@ class QuestionRepositoryImpl @Inject constructor(
         questionDao.updateQuestion(entity)
     }
 
+    override suspend fun updateAiAnalysis(id: Long, aiAnalysis: String?) {
+        questionDao.updateAiAnalysis(id, aiAnalysis)
+    }
+
     override suspend fun deleteQuestion(id: Long) {
+        // 先取 imagePath 再删行，落库记录删除的同时清理磁盘原图，避免孤儿文件
+        val imagePath = questionDao.getQuestionById(id)?.imagePath
         questionDao.deleteQuestionById(id)
+        imagePath?.let { deleteImageFile(it) }
+    }
+
+    /** 只删本应用 images 目录下由拍照留存生成的文件，路径异常时静默跳过 */
+    private fun deleteImageFile(path: String) {
+        try {
+            val imageDir = File(context.filesDir, "images").canonicalPath
+            val file = File(path)
+            if (file.exists() && file.canonicalPath.startsWith(imageDir) &&
+                file.name.startsWith("question_")
+            ) {
+                file.delete()
+            }
+        } catch (e: Exception) {
+            Log.w("QuestionRepo", "清理错题原图失败: ${e.message}")
+        }
     }
 
     override suspend fun processReviewResult(result: ReviewResult) {
