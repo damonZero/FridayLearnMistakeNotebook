@@ -33,7 +33,9 @@ data class KnowledgeAnalysis(
  */
 data class GeneratedQuestion(
     val content: String,
-    val answer: String
+    val answer: String,
+    // 变化梯度标签：同型巩固 / 情境变换 / 逆向综合（旧数据可能为空）
+    val variation: String = ""
 )
 
 /**
@@ -252,17 +254,34 @@ class AiChatService @Inject constructor(
     /**
      * 生成相似题：仿照原题出 count 道考查相同知识点的练习题
      */
+    /**
+     * 生成相似题：「举一反三」按由近及远的变化梯度出题——
+     * 第 1 题同型巩固（最接近原题，确认基本方法）、第 2 题情境变换（换壳不换考点，
+     * 迫使学生重新识别）、第 3 题逆向/综合（反问或小综合，考本质理解）。
+     * 考查目标始终是同一个核心知识点，但方向与描述逐步变化
+     */
     suspend fun generateSimilarQuestions(
         questionContent: String,
         count: Int = 3
     ): Result<List<GeneratedQuestion>> {
         val prompt = buildString {
-            appendLine("你是一位经验丰富的小学老师，请仿照下面的题目，出 $count 道考查相同知识点、难度相近的相似题。")
+            appendLine("你是一位经验丰富的小学老师，正在为下面的错题设计「举一反三」巩固练习。")
             appendLine()
             appendLine("原题：$questionContent")
             appendLine()
-            appendLine("请只输出一个 JSON 数组，不要输出任何其他文字或代码块标记，格式如下：")
-            appendLine("""[{"content": "题目内容", "answer": "答案"}]""")
+            appendLine("请出 $count 道题。所有题目都必须考查与原题相同的那个核心知识点，但按「由近及远」的变化梯度设计，让学生从不同角度反复运用这个知识点：")
+            appendLine("1. 第 1 题【同型巩固】：与原题同类型、同结构，只替换数字或表面细节，用于确认基本方法已经掌握；")
+            appendLine("2. 第 2 题【情境变换】：保留同一知识点，但更换生活情境、叙述顺序或已知条件的位置，迫使学生重新识别考点，而不是套用模板；")
+            appendLine("3. 第 3 题【逆向综合】：优先把问题反过来问（已知结果反求条件），或与一个简单的已学知识组合成小综合题，考查对知识点本质的理解。")
+            if (count > 3) {
+                appendLine("4. 第 4 题及以后在【情境变换】与【逆向综合】之间交替，保持同一考点、描述多变。")
+            }
+            appendLine()
+            appendLine("要求：难度与原题相近，不引入超纲概念；数学应用题的情境要贴近小学生生活、叙述方式可以大胆变换；语言简洁清楚，适合小学生独立阅读。")
+            appendLine()
+            appendLine("请只输出一个 JSON 数组，不要输出任何其他文字或代码块标记，每个元素格式：")
+            appendLine("""{"content": "题目内容", "answer": "答案与简要思路", "variation": "同型巩固"}""")
+            appendLine("其中 variation 只能填：同型巩固 / 情境变换 / 逆向综合")
         }
 
         return chat(AiTaskType.SIMILAR_QUESTION, prompt, maxTokens = 2048).mapCatching { content ->
@@ -396,8 +415,10 @@ class AiChatService @Inject constructor(
                         ?.takeIf { it.isJsonPrimitive }?.asString?.trim().orEmpty()
                     val answer = obj.get("answer")
                         ?.takeIf { it.isJsonPrimitive }?.asString?.trim().orEmpty()
+                    val variation = obj.get("variation")
+                        ?.takeIf { it.isJsonPrimitive }?.asString?.trim().orEmpty()
                     if (questionContent.isNotBlank()) {
-                        GeneratedQuestion(content = questionContent, answer = answer)
+                        GeneratedQuestion(content = questionContent, answer = answer, variation = variation)
                     } else {
                         null
                     }

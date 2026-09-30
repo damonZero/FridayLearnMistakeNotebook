@@ -140,6 +140,21 @@ fun PracticeContent(
                 Column(
                     modifier = Modifier.padding(20.dp)
                 ) {
+                    // 变化梯度标签：让学生知道这题在从哪个角度考同一个知识点
+                    if (question.variation.isNotBlank()) {
+                        Text(
+                            text = when (question.variation) {
+                                "同型巩固" -> "🟩 同型巩固"
+                                "情境变换" -> "🟨 情境变换"
+                                "逆向综合" -> "🟦 逆向综合"
+                                else -> question.variation
+                            },
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                    }
                     Text(
                         text = "题目",
                         fontSize = 14.sp,

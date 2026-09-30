@@ -42,10 +42,12 @@ data class BottomNavItem(
 fun FridayNotebookNavHost() {
     val navController = rememberNavController()
 
+    // 学习优先的导航设计：打开 App 直达今日复习任务（遗忘曲线不等人）；
+    // 首页退居概览位，科目为管理入口
     val bottomNavItems = listOf(
+        BottomNavItem(Screen.Review, "复习", Icons.Default.Replay),
         BottomNavItem(Screen.Home, "首页", Icons.Default.Home),
         BottomNavItem(Screen.Subjects, "科目", Icons.Default.MenuBook),
-        BottomNavItem(Screen.Review, "复习", Icons.Default.Replay),
         BottomNavItem(Screen.Settings, "设置", Icons.Default.Settings)
     )
 
@@ -76,7 +78,7 @@ fun FridayNotebookNavHost() {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = Screen.Home.route,
+            startDestination = Screen.Review.route,
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(Screen.Home.route) {

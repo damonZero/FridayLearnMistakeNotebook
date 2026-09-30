@@ -1,6 +1,7 @@
 package com.friday.mistakenotebook.ui.home
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -49,9 +50,11 @@ fun HomeScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            // 欢迎卡片
+            // 欢迎卡片：点击直达今日复习
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { navController.navigate(Screen.Review.route) },
                 colors = CardDefaults.cardColors(containerColor = Primary)
             ) {
                 Column(
@@ -65,8 +68,8 @@ fun HomeScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "加油！每天进步一点点",
-                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
+                        text = "今日待复习 ${uiState.todayReviewCount} 道 · 点我开始复习",
+                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f),
                         fontSize = 14.sp
                     )
                 }
