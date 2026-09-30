@@ -1,6 +1,7 @@
 package com.friday.mistakenotebook.ui.review
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -10,13 +11,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import coil.compose.rememberAsyncImagePainter
 import com.friday.mistakenotebook.ui.navigation.Screen
 import com.friday.mistakenotebook.ui.theme.*
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -153,6 +157,20 @@ fun ReviewContent(
                         color = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.height(8.dp))
+
+                    // 拍照识别保存的题目原图，放在题面文字上方；无图不占位
+                    question.imagePath?.let { path ->
+                        Image(
+                            painter = rememberAsyncImagePainter(File(path)),
+                            contentDescription = "题目原图",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 200.dp),
+                            contentScale = ContentScale.Fit
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+
                     Text(
                         text = question.content,
                         fontSize = 18.sp,

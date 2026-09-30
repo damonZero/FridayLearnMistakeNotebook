@@ -1,7 +1,6 @@
 package com.friday.mistakenotebook.ui.camera
 
 import android.content.Context
-import android.graphics.Bitmap
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -11,17 +10,23 @@ import com.friday.mistakenotebook.data.remote.OcrService
 import com.friday.mistakenotebook.util.ImageUtil
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import javax.inject.Inject
 
 data class CameraUiState(
     val capturedImageUri: Uri? = null,
-    val capturedBitmap: Bitmap? = null,
+    // 本次图片压缩存盘后的绝对路径（filesDir/images），失败为 null，不影响 OCR
+    val imagePath: String? = null,
     val ocrResult: OcrResult? = null,
     val isProcessing: Boolean = false,
     val error: String? = null,
@@ -43,6 +48,7 @@ class CameraViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 capturedImageUri = uri,
+                imagePath = null,
                 isProcessing = true,
                 error = null,
                 ocrHint = null,
@@ -61,6 +67,8 @@ class CameraViewModel @Inject constructor(
                     return@launch
                 }
                 Log.d("OCR_CAMERA", "图片转 Base64 成功，长度: ${base64.length}")
+
+                saveCapturedImageSafely(uri)
 
                 Log.d("OCR_CAMERA", "开始调用 OCR 服务...")
                 val result = ocrService.recognizeText(base64)
@@ -95,6 +103,7 @@ class CameraViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 capturedImageUri = uri,
+                imagePath = null,
                 isProcessing = true,
                 error = null,
                 ocrHint = null,
@@ -113,6 +122,8 @@ class CameraViewModel @Inject constructor(
                     return@launch
                 }
                 Log.d("OCR_CAMERA", "图片转 Base64 成功，长度: ${base64.length}")
+
+                saveCapturedImageSafely(uri)
 
                 Log.d("OCR_CAMERA", "开始调用 OCR 服务...")
                 val result = ocrService.recognizeText(base64)
@@ -142,10 +153,29 @@ class CameraViewModel @Inject constructor(
         }
     }
 
-    fun saveImageToLocal(): String? {
-        val bitmap = _uiState.value.capturedBitmap ?: return null
-        val filename = "question_${System.currentTimeMillis()}.jpg"
-        return imageUtil.saveImageToLocal(context, bitmap, filename)
+    /**
+     * 原图留存：压缩后写入 filesDir/images，路径进 UiState 供保存错题时落库。
+     * 任何一步失败都只告警，不打断 OCR 主流程（imagePath 保持 null）。
+     */
+    private suspend fun saveCapturedImageSafely(uri: Uri) {
+        val savedPath = withContext(Dispatchers.IO) { saveImageToLocal(uri) }
+        if (savedPath == null) {
+            Log.w("OCR_CAMERA", "原图存盘失败，本次错题将不附带图片")
+        } else {
+            _uiState.update { it.copy(imagePath = savedPath) }
+        }
+    }
+
+    private fun saveImageToLocal(uri: Uri): String? {
+        return try {
+            // decodeForSave 内含采样 + EXIF 方向矫正 + 缩放，竖拍照片不会横着存盘
+            val bitmap = imageUtil.decodeForSave(context, uri, SAVE_MAX_DIMENSION) ?: return null
+            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+            imageUtil.saveImageToLocal(context, bitmap, "question_$timestamp.jpg")
+        } catch (e: Exception) {
+            Log.w("OCR_CAMERA", "原图压缩存盘失败: ${e.message}")
+            null
+        }
     }
 
     fun clearError() {
@@ -154,5 +184,10 @@ class CameraViewModel @Inject constructor(
 
     fun reset() {
         _uiState.update { CameraUiState() }
+    }
+
+    companion object {
+        // 原图留存的采样目标边长，由 ImageUtil.decodeForSave 采样+EXIF 矫正+精确缩放
+        private const val SAVE_MAX_DIMENSION = 1920
     }
 }

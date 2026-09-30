@@ -2,7 +2,11 @@ package com.friday.mistakenotebook.data.remote
 
 import android.util.Log
 import com.friday.mistakenotebook.data.local.dao.AiConfigDao
+import com.friday.mistakenotebook.data.local.dao.AiUsageLogDao
+import com.friday.mistakenotebook.data.local.entity.AiConfigEntity
 import com.friday.mistakenotebook.data.local.entity.AiTaskType
+import com.friday.mistakenotebook.data.local.entity.AiUsageLogEntity
+import com.google.gson.JsonParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -21,7 +25,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class VolcanoOcrService @Inject constructor(
-    private val aiConfigDao: AiConfigDao
+    private val aiConfigDao: AiConfigDao,
+    private val aiUsageLogDao: AiUsageLogDao
 ) : OcrService {
 
     private val client = OkHttpClient.Builder()
@@ -37,9 +42,12 @@ class VolcanoOcrService @Inject constructor(
         .build()
 
     override suspend fun recognizeText(imageBase64: String): OcrResult = withContext(Dispatchers.IO) {
+        // config 一旦拿到，失败路径上也记一条 0 token 的用量日志
+        var loggedConfig: AiConfigEntity? = null
         try {
             val config = aiConfigDao.getEnabledConfigByTaskType(AiTaskType.OCR)
                 ?: throw Exception("请先在设置中配置 AI 模型的 API Key")
+            loggedConfig = config
             val apiKey = config.apiKey
             val baseUrl = config.baseUrl.trimEnd('/')
             val modelName = config.modelName
@@ -58,7 +66,7 @@ class VolcanoOcrService @Inject constructor(
             }
             val body = response.body?.string() ?: throw Exception("Empty response")
 
-            when (val parsed = OcrResponseParser.parse(body)) {
+            val result = when (val parsed = OcrResponseParser.parse(body)) {
                 is OcrParseResult.Success -> parsed.result
                 OcrParseResult.EmptyContent -> OcrResult(
                     text = "OCR 返回为空，请检查图片是否清晰，或手动输入题目内容",
@@ -73,12 +81,74 @@ class VolcanoOcrService @Inject constructor(
                     confidence = 0f
                 )
             }
+
+            logUsage(config, parseTokenUsage(body))
+            result
         } catch (e: Exception) {
+            loggedConfig?.let { logUsage(it, TokenUsage(0, 0)) }
             OcrResult(
                 text = "OCR 识别失败: ${e.message}\n请手动输入题目内容",
                 confidence = 0f
             )
         }
+    }
+
+    /** 一次调用的 token 用量（响应缺失时按 0 记） */
+    private data class TokenUsage(val inputTokens: Int, val outputTokens: Int)
+
+    /**
+     * 解析响应 JSON 里的 usage.prompt_tokens / usage.completion_tokens；
+     * 字段缺失或结构异常都不抛出，按 0 处理，不影响识别结果
+     */
+    private fun parseTokenUsage(responseBody: String): TokenUsage {
+        return try {
+            val usage = JsonParser.parseString(responseBody)
+                .asJsonObject.getAsJsonObject("usage") ?: return TokenUsage(0, 0)
+            fun readTokens(name: String): Int =
+                usage.get(name)?.takeIf { it.isJsonPrimitive }?.asInt ?: 0
+            TokenUsage(
+                inputTokens = readTokens("prompt_tokens"),
+                outputTokens = readTokens("completion_tokens")
+            )
+        } catch (e: Exception) {
+            Log.w("OCR_USAGE", "解析 token 用量失败: ${e.message}")
+            TokenUsage(0, 0)
+        }
+    }
+
+    /**
+     * 写一条 AI 用量日志（成功带真实 token 数，失败记 0）。
+     * 写库失败只告警，绝不影响识别结果返回
+     */
+    private suspend fun logUsage(config: AiConfigEntity, usage: TokenUsage) {
+        try {
+            aiUsageLogDao.insertUsageLog(
+                AiUsageLogEntity(
+                    provider = config.provider,
+                    taskType = AiTaskType.OCR,
+                    modelName = config.modelName,
+                    inputTokens = usage.inputTokens,
+                    outputTokens = usage.outputTokens,
+                    estimatedCost = estimateCost(config.modelName, usage)
+                )
+            )
+        } catch (e: Exception) {
+            Log.w("OCR_USAGE", "写入 AI 用量日志失败: ${e.message}")
+        }
+    }
+
+    /**
+     * 按模型名估算本次费用（元），单价由 REQUIREMENTS.md §3.2 的每 1000 tokens 参考价换算：
+     * 豆包(火山方舟) 输入 0.008/输出 0.02，DeepSeek 输入 0.001/输出 0.002，其他模型不计费
+     */
+    private fun estimateCost(modelName: String, usage: TokenUsage): Double {
+        val (inputPrice, outputPrice) = when {
+            modelName.contains("doubao", ignoreCase = true) ||
+                modelName.contains("ep-") -> 0.000008 to 0.00002
+            modelName.contains("deepseek", ignoreCase = true) -> 0.000001 to 0.000002
+            else -> 0.0 to 0.0
+        }
+        return usage.inputTokens * inputPrice + usage.outputTokens * outputPrice
     }
 
     /**

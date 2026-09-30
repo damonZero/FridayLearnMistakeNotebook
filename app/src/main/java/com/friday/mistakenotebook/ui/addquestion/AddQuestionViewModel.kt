@@ -22,6 +22,8 @@ data class AddQuestionUiState(
     val answer: String = "",
     val userAnswer: String = "",
     val errorType: ErrorType = ErrorType.UNKNOWN,
+    // 拍照识别时随 OCR 结果回传的原图绝对路径；手动录入为 null
+    val imagePath: String? = null,
     val isLoading: Boolean = false,
     val isSaved: Boolean = false,
     val ocrApplied: Boolean = false,
@@ -83,20 +85,21 @@ class AddQuestionViewModel @Inject constructor(
         _uiState.update { it.copy(errorType = errorType) }
     }
 
-    fun applyOcrResult(content: String) {
+    fun applyOcrResult(content: String, imagePath: String? = null) {
         _uiState.update {
             it.copy(
                 content = content.trim(),
+                imagePath = imagePath,
                 ocrApplied = true,
                 isSaved = false
             )
         }
     }
 
-    fun createQuestionDraftFromOcr(content: String) {
+    fun createQuestionDraftFromOcr(content: String, imagePath: String? = null) {
         val normalizedContent = content.trim()
         if (normalizedContent.isBlank()) return
-        applyOcrResult(normalizedContent)
+        applyOcrResult(normalizedContent, imagePath)
     }
 
     fun saveQuestion() {
@@ -131,14 +134,16 @@ class AddQuestionViewModel @Inject constructor(
                     content = state.content,
                     answer = state.answer,
                     userAnswer = state.userAnswer,
-                    errorType = state.errorType
+                    errorType = state.errorType,
+                    imagePath = state.imagePath
                 )
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         isSaved = true,
                         selectedSubjectId = subjectId,
-                        ocrApplied = false
+                        ocrApplied = false,
+                        imagePath = null
                     )
                 }
             } catch (e: Exception) {

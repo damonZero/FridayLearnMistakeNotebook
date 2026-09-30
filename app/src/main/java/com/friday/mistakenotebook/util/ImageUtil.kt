@@ -54,6 +54,32 @@ class ImageUtil @Inject constructor() {
         }
     }
 
+    /**
+     * 解码图片用于原图留存：采样降载 + EXIF 方向矫正 + 精确缩放到 maxDimension 内。
+     * 与 uriToBase64 的区别：返回 Bitmap（存盘展示用），不转 Base64
+     */
+    fun decodeForSave(context: Context, uri: Uri, maxDimension: Int): Bitmap? {
+        return try {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            context.contentResolver.openInputStream(uri)?.use {
+                BitmapFactory.decodeStream(it, null, bounds)
+            } ?: return null
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+
+            val options = BitmapFactory.Options().apply {
+                inSampleSize = calculateInSampleSize(bounds.outWidth, bounds.outHeight, maxDimension)
+            }
+            val bitmap = context.contentResolver.openInputStream(uri)?.use {
+                BitmapFactory.decodeStream(it, null, options)
+            } ?: return null
+
+            scaleDown(applyExifRotation(context, uri, bitmap), maxDimension)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
     private fun calculateInSampleSize(width: Int, height: Int, maxDimension: Int): Int {
         var sampleSize = 1
         var maxSide = maxOf(width, height)

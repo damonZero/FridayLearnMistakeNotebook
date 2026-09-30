@@ -231,7 +231,15 @@ fun CameraScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Button(
-                        onClick = { onOcrComplete(uiState.ocrResult!!.text) },
+                        onClick = {
+                            // 在 onOcrComplete（内部会 set "ocr_result" 并 popBackStack）之前，
+                            // 先把原图路径一并回传给添加页；无图不设该 key
+                            uiState.imagePath?.let { path ->
+                                navController.previousBackStackEntry?.savedStateHandle
+                                    ?.set("ocr_image_path", path)
+                            }
+                            onOcrComplete(uiState.ocrResult!!.text)
+                        },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("使用此结果")
