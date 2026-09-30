@@ -1,5 +1,6 @@
 package com.friday.mistakenotebook.ui.subject
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -71,6 +72,9 @@ fun SubjectsScreen(
                 items(uiState.subjects) { subject ->
                     SubjectCard(
                         subject = subject,
+                        onClick = {
+                            navController.navigate(Screen.SubjectDetail.createRoute(subject.id))
+                        },
                         onDelete = { viewModel.deleteSubject(subject.id) }
                     )
                 }
@@ -128,6 +132,7 @@ fun EmptySubjectsContent(
 @Composable
 fun SubjectCard(
     subject: Subject,
+    onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
     val color = try {
@@ -139,7 +144,9 @@ fun SubjectCard(
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
         colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f))
     ) {
         Row(
@@ -164,6 +171,11 @@ fun SubjectCard(
                     )
                 }
             }
+            Icon(
+                Icons.Default.ChevronRight,
+                contentDescription = "查看科目概况",
+                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+            )
             if (!subject.isPreset) {
                 IconButton(onClick = { showDeleteDialog = true }) {
                     Icon(

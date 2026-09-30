@@ -17,6 +17,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.friday.mistakenotebook.ui.home.HomeScreen
 import com.friday.mistakenotebook.ui.subject.SubjectsScreen
+import com.friday.mistakenotebook.ui.subjectdetail.SubjectDetailScreen
 import com.friday.mistakenotebook.ui.review.ReviewScreen
 import com.friday.mistakenotebook.ui.settings.SettingsScreen
 import com.friday.mistakenotebook.ui.addquestion.AddQuestionScreen
@@ -83,6 +84,12 @@ fun FridayNotebookNavHost() {
             }
             composable(Screen.Subjects.route) {
                 SubjectsScreen(navController = navController)
+            }
+            composable(
+                Screen.SubjectDetail.route,
+                arguments = listOf(navArgument("subjectId") { type = NavType.LongType })
+            ) {
+                SubjectDetailScreen(navController = navController)
             }
             composable(Screen.Review.route) {
                 ReviewScreen(navController = navController)

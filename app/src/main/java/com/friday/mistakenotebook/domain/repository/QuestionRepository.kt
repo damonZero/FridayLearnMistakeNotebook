@@ -22,6 +22,12 @@ interface QuestionRepository {
     /** 莱特纳盒子分布：key=盒子 1..5，value=题目数（统计页真实分布用） */
     fun getBoxCounts(): Flow<Map<Int, Int>>
 
+    /** 单科盒子分布（科目概况页用） */
+    fun getBoxCountsBySubject(subjectId: Long): Flow<Map<Int, Int>>
+
+    /** 单科今日待复习数（当天到期即算，随分钟时钟刷新） */
+    fun getTodayDueCountBySubject(subjectId: Long): Flow<Int>
+
     suspend fun getQuestionById(id: Long): Question?
 
     suspend fun addQuestion(

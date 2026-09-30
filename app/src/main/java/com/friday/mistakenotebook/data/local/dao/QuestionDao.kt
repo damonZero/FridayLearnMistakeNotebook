@@ -45,6 +45,12 @@ interface QuestionDao {
     @Query("SELECT leitnerBox, COUNT(*) AS count FROM questions GROUP BY leitnerBox")
     fun getBoxCounts(): Flow<List<BoxCount>>
 
+    @Query("SELECT leitnerBox, COUNT(*) AS count FROM questions WHERE subjectId = :subjectId GROUP BY leitnerBox")
+    fun getBoxCountsBySubject(subjectId: Long): Flow<List<BoxCount>>
+
+    @Query("SELECT COUNT(*) FROM questions WHERE subjectId = :subjectId AND nextReviewDate <= :dueUntil")
+    fun getTodayDueCountBySubject(subjectId: Long, dueUntil: Long): Flow<Int>
+
     /** 只更新 AI 分析列，避免整行回写覆盖分析期间发生的复习排期变更 */
     @Query("UPDATE questions SET aiAnalysis = :aiAnalysis WHERE id = :id")
     suspend fun updateAiAnalysis(id: Long, aiAnalysis: String?)

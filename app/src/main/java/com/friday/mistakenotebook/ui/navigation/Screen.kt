@@ -23,6 +23,11 @@ sealed class Screen(val route: String) {
     // 设置页面
     object AiConfig : Screen("ai_config")
 
+    // 科目概况
+    object SubjectDetail : Screen("subject/{subjectId}") {
+        fun createRoute(subjectId: Long): String = "subject/$subjectId"
+    }
+
     // 拍照识别
     object Camera : Screen("camera")
 

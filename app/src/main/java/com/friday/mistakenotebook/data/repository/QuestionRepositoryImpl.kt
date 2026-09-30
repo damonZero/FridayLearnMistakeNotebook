@@ -77,6 +77,18 @@ class QuestionRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun getBoxCountsBySubject(subjectId: Long): Flow<Map<Int, Int>> {
+        return questionDao.getBoxCountsBySubject(subjectId).map { rows ->
+            rows.associate { it.leitnerBox to it.count }
+        }
+    }
+
+    override fun getTodayDueCountBySubject(subjectId: Long): Flow<Int> {
+        return dueClock.flatMapLatest { dueUntil ->
+            questionDao.getTodayDueCountBySubject(subjectId, dueUntil)
+        }
+    }
+
     override fun getTotalQuestionCount(): Flow<Int> {
         return questionDao.getTotalQuestionCount()
     }
