@@ -24,6 +24,8 @@ import com.friday.mistakenotebook.data.remote.GeneratedQuestion
 import com.friday.mistakenotebook.domain.model.Question
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
@@ -47,7 +49,7 @@ data class SheetFiles(val exerciseSheet: File, val answerSheet: File)
 sealed interface SheetGenerateState {
     data object Idle : SheetGenerateState
     data class Generating(val progress: String) : SheetGenerateState
-    data class Ready(val files: SheetFiles) : SheetGenerateState
+    data class Ready(val files: SheetFiles, val note: String? = null) : SheetGenerateState
     data class Failed(val message: String) : SheetGenerateState
 }
 
@@ -86,7 +88,7 @@ class PracticeSheetPdfGenerator @Inject constructor(
         private fun boldTypeface() = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
     }
 
-    /** 分页排版写手：管理当前页与光标位置，自动换页 */
+    /** 分页排版写手：管理当前页与光标位置，自动换页（页脚每页绘制） */
     private inner class Writer(private val doc: PdfDocument, private val footer: (Int) -> String) {
         private var page: PdfDocument.Page? = null
         private var canvas: Canvas? = null
@@ -101,6 +103,10 @@ class PracticeSheetPdfGenerator @Inject constructor(
             page = doc.startPage(PdfDocument.PageInfo.Builder(PAGE_W, PAGE_H, pageNum).create())
             canvas = page!!.canvas
             y = MARGIN
+            // 页脚每页都画：内容区最多到 PAGE_H-MARGIN，不会与页脚重叠
+            val c = canvas!!
+            c.drawText(footer(pageNum), MARGIN, PAGE_H - MARGIN / 2, grayPaint(9f))
+            c.drawText("第 $pageNum 页", PAGE_W - MARGIN - 60f, PAGE_H - MARGIN / 2, grayPaint(9f))
         }
 
         fun endPage() {
@@ -112,22 +118,33 @@ class PracticeSheetPdfGenerator @Inject constructor(
             if (y + needed > PAGE_H - MARGIN) startPage()
         }
 
-        /** 分页绘制 StaticLayout：整块超页时按行平移续页 */
+        /** 分页绘制 StaticLayout：断点按行界对齐，跨页不截断行、不重复绘制 */
         fun drawLayout(layout: StaticLayout) {
-            var offset = 0
-            while (offset < layout.height) {
-                ensure(24f)
+            var line = 0
+            val lineCount = layout.lineCount
+            while (line < lineCount) {
+                val lineHeight = (layout.getLineBottom(line) - layout.getLineTop(line) + 2f)
+                ensure(lineHeight)
                 val remaining = PAGE_H - MARGIN - y
-                val drawHeight = minOf(remaining, (layout.height - offset).toFloat())
+                var last = line
+                while (last < lineCount &&
+                    layout.getLineBottom(last) - layout.getLineTop(line) <= remaining
+                ) {
+                    last++
+                }
+                if (last == line) last = line + 1 // 单行超高也强制画出
+                val top = layout.getLineTop(line)
+                val bottom = layout.getLineBottom(last - 1)
                 val c = canvas!!
                 c.save()
-                c.translate(MARGIN, y - offset)
-                c.clipRect(0f, 0f, CONTENT_W, drawHeight)
+                c.translate(MARGIN, y)
+                c.clipRect(0f, 0f, CONTENT_W, (bottom - top).toFloat())
+                c.translate(0f, -top.toFloat())
                 layout.draw(c)
                 c.restore()
-                y += drawHeight
-                offset += drawHeight.toInt()
-                if (offset < layout.height) startPage()
+                y += bottom - top
+                line = last
+                if (line < lineCount) startPage()
             }
         }
 
@@ -201,17 +218,10 @@ class PracticeSheetPdfGenerator @Inject constructor(
             y += 10f
         }
 
-        fun finish() {
-            // 页脚：页码（+练习卷的签名栏）
-            val c = canvas
-            if (c != null) {
-                val p = grayPaint(9f)
-                c.drawText(footer(pageNum), MARGIN, PAGE_H - MARGIN / 2, p)
-                c.drawText("第 $pageNum 页", PAGE_W - MARGIN - 60f, PAGE_H - MARGIN / 2, p)
-            }
-            endPage()
-        }
+        fun finish() = endPage()
     }
+
+    private val mutex = kotlinx.coroutines.sync.Mutex()
 
     /**
      * 生成练习卷与答案卷。
@@ -222,14 +232,27 @@ class PracticeSheetPdfGenerator @Inject constructor(
         includeSimilar: Boolean,
         title: String
     ): SheetFiles = withContext(Dispatchers.IO) {
-        val dir = File(context.filesDir, "exports").apply { mkdirs() }
-        val stamp = SimpleDateFormat("yyyyMMdd_HHmm", Locale.getDefault()).format(Date())
-        val exercise = File(dir, "周周练习卷_$stamp.pdf")
-        val answer = File(dir, "周周答案卷_$stamp.pdf")
+        mutex.withLock {
+            val dir = File(context.filesDir, "exports").apply { mkdirs() }
+            val stamp = SimpleDateFormat("yyyyMMdd_HHmm", Locale.getDefault()).format(Date())
+            val exercise = uniqueFile(dir, "周周练习卷_$stamp")
+            val answer = uniqueFile(dir, "周周答案卷_$stamp")
 
-        generateExercise(exercise, items, includeSimilar, title)
-        generateAnswer(answer, items, includeSimilar, title)
-        SheetFiles(exercise, answer)
+            generateExercise(exercise, items, includeSimilar, title)
+            generateAnswer(answer, items, includeSimilar, title)
+            SheetFiles(exercise, answer)
+        }
+    }
+
+    /** 同一分钟内多次生成时追加序号，避免覆写仍在分享中的文件 */
+    private fun uniqueFile(dir: File, base: String): File {
+        var f = File(dir, "$base.pdf")
+        var i = 1
+        while (f.exists()) {
+            f = File(dir, "${base}_$i.pdf")
+            i++
+        }
+        return f
     }
 
     // ---------- 练习卷 ----------
@@ -271,15 +294,18 @@ class PracticeSheetPdfGenerator @Inject constructor(
         }
 
         writer.finish()
-        doc.writeTo(FileOutputStream(out))
-        doc.close()
+        try {
+            FileOutputStream(out).use { doc.writeTo(it) }
+        } finally {
+            doc.close()
+        }
     }
 
     // ---------- 答案卷 ----------
 
     private fun generateAnswer(out: File, items: List<SheetItem>, includeSimilar: Boolean, title: String) {
         val doc = PdfDocument()
-        val writer = Writer(doc) { page -> "答案卷 · 家长留存（第 $page 页）" }
+        val writer = Writer(doc) { "答案卷 · 家长留存" }
         writer.startPage()
         writer.drawText("答案卷（家长留存，勿发给孩子）", titlePaint(16f), 2f)
         writer.drawText(title, grayPaint(11f), 8f)
@@ -315,8 +341,11 @@ class PracticeSheetPdfGenerator @Inject constructor(
         writer.drawText("错因备注：________________________________________", bodyPaint(), 6f)
 
         writer.finish()
-        doc.writeTo(FileOutputStream(out))
-        doc.close()
+        try {
+            FileOutputStream(out).use { doc.writeTo(it) }
+        } finally {
+            doc.close()
+        }
     }
 }
 

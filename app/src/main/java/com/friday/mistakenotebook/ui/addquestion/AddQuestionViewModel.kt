@@ -91,17 +91,6 @@ class AddQuestionViewModel @Inject constructor(
         _uiState.update { it.copy(errorType = errorType) }
     }
 
-    fun applyOcrResult(content: String, imagePath: String? = null) {
-        _uiState.update {
-            it.copy(
-                content = content.trim(),
-                imagePath = imagePath,
-                ocrApplied = true,
-                isSaved = false
-            )
-        }
-    }
-
     fun createQuestionDraftFromOcr(
         content: String,
         imagePath: String? = null,
@@ -111,14 +100,14 @@ class AddQuestionViewModel @Inject constructor(
     ) {
         val normalizedContent = content.trim()
         if (normalizedContent.isBlank()) return
-        // 题干、学生作答、参考答案、考点一起预填；答案可留空由用户核对补充
+        // 预填但不覆盖：纯 OCR 回退时 answer 等键不存在（传空串），不能清掉用户已手输的内容
         _uiState.update {
             it.copy(
                 content = normalizedContent,
-                imagePath = imagePath,
-                answer = answer.trim(),
-                userAnswer = userAnswer.trim(),
-                knowledgePoint = knowledgePoint.trim(),
+                imagePath = imagePath ?: it.imagePath,
+                answer = answer.ifBlank { it.answer },
+                userAnswer = userAnswer.ifBlank { it.userAnswer },
+                knowledgePoint = knowledgePoint.ifBlank { it.knowledgePoint },
                 ocrApplied = true,
                 isSaved = false
             )

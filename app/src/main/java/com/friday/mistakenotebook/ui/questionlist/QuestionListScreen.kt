@@ -281,10 +281,16 @@ fun QuestionListScreen(
                 onDismissRequest = { viewModel.consumeSheetState() },
                 title = { Text("练习卷已生成") },
                 text = {
-                    Text(
-                        "已生成练习卷（孩子做）与答案卷（家长留存）两个 PDF。\n可通过微信发送到电脑或打印 APP 打印。",
-                        fontSize = 14.sp
-                    )
+                    Column {
+                        Text(
+                            "已生成练习卷（孩子做）与答案卷（家长留存）两个 PDF。\n可通过微信发送到电脑或打印 APP 打印。",
+                            fontSize = 14.sp
+                        )
+                        st.note?.let {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(it, fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                        }
+                    }
                 },
                 confirmButton = {
                     TextButton(onClick = {

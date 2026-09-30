@@ -348,6 +348,8 @@ class AiChatService @Inject constructor(
             val message = choices[0].asJsonObject.getAsJsonObject("message") ?: return null
             val contentElement = message.get("content")
 
+            // 注意：不要回退到 reasoning_content——思考文本里的草稿/模板 JSON
+            // 会被宽松解析器误当结果。正文为空时直接报错让用户重试
             val content = when {
                 contentElement == null || contentElement.isJsonNull -> ""
                 contentElement.isJsonPrimitive -> contentElement.asString
@@ -361,14 +363,7 @@ class AiChatService @Inject constructor(
                 else -> ""
             }
 
-            val finalContent = if (content.isNotBlank()) {
-                content
-            } else {
-                // 输出预算被推理耗尽时正文可能为空，从思考内容里容错提取（JSON 解析本身有截取容错）
-                message.get("reasoning_content")?.takeIf { it.isJsonPrimitive }?.asString.orEmpty()
-            }
-
-            finalContent.trim().takeIf { it.isNotBlank() }
+            content.trim().takeIf { it.isNotBlank() }
         } catch (e: Exception) {
             null
         }

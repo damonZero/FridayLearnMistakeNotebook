@@ -102,7 +102,9 @@ class QuestionDetailViewModel @Inject constructor(
         _sheetState.value = SheetGenerateState.Generating("正在生成举一反三…")
         viewModelScope.launch {
             try {
+                var simFailed = false
                 val similar = aiChatService.generateSimilarQuestions(question.content)
+                    .onFailure { simFailed = true }
                     .getOrElse { emptyList() }
                 _sheetState.value = SheetGenerateState.Generating("正在排版生成 PDF…")
                 val title = "错题练习卷${question.knowledgePoint?.takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""}"
@@ -111,7 +113,10 @@ class QuestionDetailViewModel @Inject constructor(
                     includeSimilar = true,
                     title = title
                 )
-                _sheetState.value = SheetGenerateState.Ready(files)
+                _sheetState.value = SheetGenerateState.Ready(
+                    files,
+                    note = if (simFailed) "注意：举一反三生成失败，本卷仅含原错题" else null
+                )
             } catch (e: Exception) {
                 _sheetState.value = SheetGenerateState.Failed("生成失败：${e.message ?: "未知错误"}")
             }

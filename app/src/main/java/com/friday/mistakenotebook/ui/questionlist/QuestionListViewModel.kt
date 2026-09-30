@@ -11,6 +11,7 @@ import com.friday.mistakenotebook.domain.repository.SubjectRepository
 import com.friday.mistakenotebook.print.PracticeSheetPdfGenerator
 import com.friday.mistakenotebook.print.SheetGenerateState
 import com.friday.mistakenotebook.print.SheetItem
+import com.friday.mistakenotebook.ui.addquestion.getErrorTypeName
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -171,7 +172,8 @@ class QuestionListViewModel @Inject constructor(
                 if (group.isEmpty()) {
                     null
                 } else {
-                    QuestionSection(ERROR_TYPE_LABELS[type] ?: "未知", group)
+                    // 统一用 getErrorTypeName，与卡片 chip 文案同源
+                    QuestionSection(getErrorTypeName(type), group)
                 }
             }
             // groupBy 保留首次出现顺序，与当前排序一致：日期自然从新到旧
@@ -239,12 +241,15 @@ class QuestionListViewModel @Inject constructor(
                     _sheetState.value = SheetGenerateState.Failed("所选题目不在当前列表中")
                     return@launch
                 }
+                var failedCount = 0
                 val items = selected.mapIndexed { index, q ->
                     val similar = if (includeSimilar) {
                         _sheetState.value = SheetGenerateState.Generating(
                             "正在生成第 ${index + 1}/${selected.size} 题的举一反三…"
                         )
-                        aiChatService.generateSimilarQuestions(q.content).getOrElse { emptyList() }
+                        aiChatService.generateSimilarQuestions(q.content)
+                            .onFailure { failedCount++ }
+                            .getOrElse { emptyList() }
                     } else {
                         emptyList()
                     }
@@ -253,7 +258,10 @@ class QuestionListViewModel @Inject constructor(
                 _sheetState.value = SheetGenerateState.Generating("正在排版生成 PDF…")
                 val title = "错题练习卷 · ${SimpleDateFormat("yyyy年M月d日", Locale.getDefault()).format(Date())}"
                 val files = pdfGenerator.generate(items, includeSimilar, title)
-                _sheetState.value = SheetGenerateState.Ready(files)
+                _sheetState.value = SheetGenerateState.Ready(
+                    files,
+                    note = if (failedCount > 0) "注意：$failedCount 题的举一反三生成失败，已跳过" else null
+                )
             } catch (e: Exception) {
                 _sheetState.value = SheetGenerateState.Failed("生成失败：${e.message ?: "未知错误"}")
             }
@@ -266,13 +274,5 @@ class QuestionListViewModel @Inject constructor(
 
     companion object {
         private const val SEARCH_DEBOUNCE_MILLIS = 300L
-
-        private val ERROR_TYPE_LABELS = mapOf(
-            ErrorType.UNKNOWN to "未知",
-            ErrorType.CARELESS to "粗心",
-            ErrorType.CONCEPTUAL to "概念错误",
-            ErrorType.METHOD to "方法错误",
-            ErrorType.CALCULATION to "计算错误"
-        )
     }
 }

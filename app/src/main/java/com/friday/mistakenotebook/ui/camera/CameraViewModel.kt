@@ -121,6 +121,9 @@ class CameraViewModel @Inject constructor(
                 var answer = ""
                 var userAnswer = ""
                 var knowledgePoint = ""
+                val failure = extraction.exceptionOrNull()
+                val isParseFailure = failure is IllegalStateException &&
+                    failure.message?.contains("无法解析") == true
                 if (extraction.isSuccess) {
                     val ex = extraction.getOrThrow()
                     Log.d("OCR_CAMERA", "AI 识题成功: content=${ex.content.take(50)}...")
@@ -128,10 +131,18 @@ class CameraViewModel @Inject constructor(
                     answer = ex.answer
                     userAnswer = ex.userAnswer
                     knowledgePoint = ex.knowledgePoint
-                } else {
-                    Log.w("OCR_CAMERA", "AI 识题失败，回退纯 OCR: ${extraction.exceptionOrNull()?.message}")
+                } else if (isParseFailure) {
+                    // 网络通了但返回结构无法解析：回退纯 OCR 拿原始文本仍有价值
+                    Log.w("OCR_CAMERA", "AI 识题解析失败，回退纯 OCR: ${failure?.message}")
                     result = ocrService.recognizeText(base64)
                     if (seq != captureSeq) return@launch
+                } else {
+                    // 配置缺失/网络问题：向同一配置重发没有意义，直接呈现错误
+                    Log.w("OCR_CAMERA", "AI 识题失败: ${failure?.message}")
+                    result = OcrResult(
+                        text = "AI 识题失败：${failure?.message ?: "未知错误"}\n请检查 AI 配置与网络，或手动输入题目",
+                        confidence = 0f
+                    )
                 }
                 Log.d("OCR_CAMERA", "识别完成: text=${result.text.take(50)}..., confidence=${result.confidence}")
 
