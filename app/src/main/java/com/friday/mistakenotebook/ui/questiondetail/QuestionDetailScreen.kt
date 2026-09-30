@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -22,6 +23,9 @@ import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.friday.mistakenotebook.data.remote.KnowledgeAnalysis
 import com.friday.mistakenotebook.domain.algorithm.SpacedRepetitionAlgorithm
+import com.friday.mistakenotebook.print.SheetGenerateState
+import com.friday.mistakenotebook.print.printExerciseSheet
+import com.friday.mistakenotebook.print.sharePracticeSheets
 import com.friday.mistakenotebook.ui.addquestion.getErrorTypeName
 import com.friday.mistakenotebook.ui.navigation.Screen
 import com.friday.mistakenotebook.ui.theme.*
@@ -37,6 +41,7 @@ fun QuestionDetailScreen(
     viewModel: QuestionDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val sheetState by viewModel.sheetState.collectAsState()
     var showDeleteDialog by remember { mutableStateOf(false) }
     val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
 
@@ -98,6 +103,7 @@ fun QuestionDetailScreen(
                     onStartPractice = {
                         navController.navigate(Screen.Practice.createRoute(uiState.question!!.id))
                     },
+                    onGenerateSheet = { viewModel.generatePracticeSheet() },
                     onRequestDelete = { showDeleteDialog = true }
                 )
             }
@@ -126,6 +132,66 @@ fun QuestionDetailScreen(
             }
         )
     }
+
+    // 练习卷生成状态弹窗
+    val sheetContext = LocalContext.current
+    when (val st = sheetState) {
+        is SheetGenerateState.Generating -> {
+            AlertDialog(
+                onDismissRequest = {},
+                title = { Text("正在生成练习卷") },
+                text = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(st.progress, fontSize = 14.sp)
+                    }
+                },
+                confirmButton = {}
+            )
+        }
+        is SheetGenerateState.Ready -> {
+            AlertDialog(
+                onDismissRequest = { viewModel.consumeSheetState() },
+                title = { Text("练习卷已生成") },
+                text = {
+                    Text(
+                        "已生成练习卷（孩子做）与答案卷（家长留存）两个 PDF。\n可通过微信发送到电脑或打印 APP 打印。",
+                        fontSize = 14.sp
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        sharePracticeSheets(sheetContext, st.files)
+                        viewModel.consumeSheetState()
+                    }) { Text("分享 / 发微信") }
+                },
+                dismissButton = {
+                    Row {
+                        TextButton(onClick = {
+                            printExerciseSheet(sheetContext, st.files.exerciseSheet)
+                            viewModel.consumeSheetState()
+                        }) { Text("直接打印") }
+                        TextButton(onClick = { viewModel.consumeSheetState() }) { Text("完成") }
+                    }
+                }
+            )
+        }
+        is SheetGenerateState.Failed -> {
+            AlertDialog(
+                onDismissRequest = { viewModel.consumeSheetState() },
+                title = { Text("生成失败") },
+                text = { Text(st.message) },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.consumeSheetState() }) { Text("知道了") }
+                }
+            )
+        }
+        SheetGenerateState.Idle -> {}
+    }
 }
 
 @Composable
@@ -135,6 +201,7 @@ fun QuestionDetailContent(
     dateFormat: SimpleDateFormat,
     onAnalyze: () -> Unit,
     onStartPractice: () -> Unit,
+    onGenerateSheet: () -> Unit,
     onRequestDelete: () -> Unit
 ) {
     val question = uiState.question ?: return
@@ -386,6 +453,16 @@ fun QuestionDetailContent(
             colors = ButtonDefaults.buttonColors(containerColor = Secondary)
         ) {
             Text("生成相似题练习", fontSize = 16.sp)
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // 生成纸质练习卷
+        OutlinedButton(
+            onClick = onGenerateSheet,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("🖨 生成纸质练习卷（含举一反三）", fontSize = 14.sp)
         }
 
         Spacer(modifier = Modifier.height(12.dp))

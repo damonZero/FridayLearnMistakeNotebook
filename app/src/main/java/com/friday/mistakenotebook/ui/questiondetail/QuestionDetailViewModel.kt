@@ -7,6 +7,9 @@ import com.friday.mistakenotebook.data.remote.AiChatService
 import com.friday.mistakenotebook.data.remote.KnowledgeAnalysis
 import com.friday.mistakenotebook.domain.model.Question
 import com.friday.mistakenotebook.domain.repository.QuestionRepository
+import com.friday.mistakenotebook.print.PracticeSheetPdfGenerator
+import com.friday.mistakenotebook.print.SheetGenerateState
+import com.friday.mistakenotebook.print.SheetItem
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -30,13 +33,17 @@ data class QuestionDetailUiState(
 class QuestionDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val questionRepository: QuestionRepository,
-    private val aiChatService: AiChatService
+    private val aiChatService: AiChatService,
+    private val pdfGenerator: PracticeSheetPdfGenerator
 ) : ViewModel() {
 
     private val questionId: Long = savedStateHandle.get<Long>("questionId") ?: -1L
 
     private val _uiState = MutableStateFlow(QuestionDetailUiState())
     val uiState: StateFlow<QuestionDetailUiState> = _uiState.asStateFlow()
+
+    private val _sheetState = MutableStateFlow<SheetGenerateState>(SheetGenerateState.Idle)
+    val sheetState: StateFlow<SheetGenerateState> = _sheetState.asStateFlow()
 
     init {
         loadQuestion()
@@ -84,6 +91,35 @@ class QuestionDetailViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    /**
+     * 生成单题练习卷（题卷+答案卷），默认包含举一反三
+     */
+    fun generatePracticeSheet() {
+        val question = _uiState.value.question ?: return
+        if (_sheetState.value is SheetGenerateState.Generating) return
+        _sheetState.value = SheetGenerateState.Generating("正在生成举一反三…")
+        viewModelScope.launch {
+            try {
+                val similar = aiChatService.generateSimilarQuestions(question.content)
+                    .getOrElse { emptyList() }
+                _sheetState.value = SheetGenerateState.Generating("正在排版生成 PDF…")
+                val title = "错题练习卷${question.knowledgePoint?.takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""}"
+                val files = pdfGenerator.generate(
+                    listOf(SheetItem(question, similar)),
+                    includeSimilar = true,
+                    title = title
+                )
+                _sheetState.value = SheetGenerateState.Ready(files)
+            } catch (e: Exception) {
+                _sheetState.value = SheetGenerateState.Failed("生成失败：${e.message ?: "未知错误"}")
+            }
+        }
+    }
+
+    fun consumeSheetState() {
+        _sheetState.value = SheetGenerateState.Idle
     }
 
     /**

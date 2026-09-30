@@ -3,10 +3,14 @@ package com.friday.mistakenotebook.ui.questionlist
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.friday.mistakenotebook.data.local.entity.ErrorType
+import com.friday.mistakenotebook.data.remote.AiChatService
 import com.friday.mistakenotebook.domain.model.Question
 import com.friday.mistakenotebook.domain.model.Subject
 import com.friday.mistakenotebook.domain.repository.QuestionRepository
 import com.friday.mistakenotebook.domain.repository.SubjectRepository
+import com.friday.mistakenotebook.print.PracticeSheetPdfGenerator
+import com.friday.mistakenotebook.print.SheetGenerateState
+import com.friday.mistakenotebook.print.SheetItem
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -16,6 +20,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -51,17 +58,25 @@ data class QuestionListUiState(
     val searchQuery: String = "",
     val selectedSubjectId: Long? = null,
     val sortMode: QuestionSort = QuestionSort.NEWEST,
-    val groupMode: QuestionGroup = QuestionGroup.NONE
+    val groupMode: QuestionGroup = QuestionGroup.NONE,
+    // 多选打印模式
+    val selectionMode: Boolean = false,
+    val selectedIds: Set<Long> = emptySet()
 )
 
 @HiltViewModel
 class QuestionListViewModel @Inject constructor(
     private val questionRepository: QuestionRepository,
-    private val subjectRepository: SubjectRepository
+    private val subjectRepository: SubjectRepository,
+    private val aiChatService: AiChatService,
+    private val pdfGenerator: PracticeSheetPdfGenerator
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(QuestionListUiState())
     val uiState: StateFlow<QuestionListUiState> = _uiState.asStateFlow()
+
+    private val _sheetState = MutableStateFlow<SheetGenerateState>(SheetGenerateState.Idle)
+    val sheetState: StateFlow<SheetGenerateState> = _sheetState.asStateFlow()
 
     private var allQuestions: List<Question> = emptyList()
     private var searchDebounceJob: Job? = null
@@ -186,6 +201,67 @@ class QuestionListViewModel @Inject constructor(
         viewModelScope.launch {
             questionRepository.deleteQuestion(id)
         }
+    }
+
+    // ---------- 多选打印 ----------
+
+    fun enterSelectionMode() {
+        _uiState.update { it.copy(selectionMode = true, selectedIds = emptySet()) }
+    }
+
+    fun exitSelectionMode() {
+        _uiState.update { it.copy(selectionMode = false, selectedIds = emptySet()) }
+    }
+
+    fun toggleSelection(id: Long) {
+        _uiState.update {
+            val next = if (id in it.selectedIds) it.selectedIds - id else it.selectedIds + id
+            it.copy(selectedIds = next)
+        }
+    }
+
+    fun selectAllVisible() {
+        _uiState.update { it.copy(selectedIds = it.questions.map { q -> q.id }.toSet()) }
+    }
+
+    /**
+     * 批量生成练习卷：默认只印原错题+作答区；includeSimilar 时逐题调 AI 生成举一反三
+     */
+    fun generateSheet(includeSimilar: Boolean) {
+        val ids = _uiState.value.selectedIds
+        if (ids.isEmpty()) return
+        if (_sheetState.value is SheetGenerateState.Generating) return
+        _sheetState.value = SheetGenerateState.Generating("正在整理题目…")
+        viewModelScope.launch {
+            try {
+                val selected = allQuestions.filter { it.id in ids }
+                if (selected.isEmpty()) {
+                    _sheetState.value = SheetGenerateState.Failed("所选题目不在当前列表中")
+                    return@launch
+                }
+                val items = selected.mapIndexed { index, q ->
+                    val similar = if (includeSimilar) {
+                        _sheetState.value = SheetGenerateState.Generating(
+                            "正在生成第 ${index + 1}/${selected.size} 题的举一反三…"
+                        )
+                        aiChatService.generateSimilarQuestions(q.content).getOrElse { emptyList() }
+                    } else {
+                        emptyList()
+                    }
+                    SheetItem(q, similar)
+                }
+                _sheetState.value = SheetGenerateState.Generating("正在排版生成 PDF…")
+                val title = "错题练习卷 · ${SimpleDateFormat("yyyy年M月d日", Locale.getDefault()).format(Date())}"
+                val files = pdfGenerator.generate(items, includeSimilar, title)
+                _sheetState.value = SheetGenerateState.Ready(files)
+            } catch (e: Exception) {
+                _sheetState.value = SheetGenerateState.Failed("生成失败：${e.message ?: "未知错误"}")
+            }
+        }
+    }
+
+    fun consumeSheetState() {
+        _sheetState.value = SheetGenerateState.Idle
     }
 
     companion object {

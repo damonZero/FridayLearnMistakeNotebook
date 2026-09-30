@@ -18,8 +18,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.friday.mistakenotebook.print.printExerciseSheet
+import com.friday.mistakenotebook.print.sharePracticeSheets
+import com.friday.mistakenotebook.print.SheetGenerateState
 import com.friday.mistakenotebook.domain.algorithm.SpacedRepetitionAlgorithm
 import com.friday.mistakenotebook.domain.model.Question
 import com.friday.mistakenotebook.ui.addquestion.getErrorTypeName
@@ -34,6 +38,8 @@ fun QuestionListScreen(
     viewModel: QuestionListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val sheetState by viewModel.sheetState.collectAsState()
+    val context = LocalContext.current
 
     LaunchedEffect(subjectId) {
         viewModel.selectSubject(if (subjectId == -1L) null else subjectId)
@@ -41,27 +47,58 @@ fun QuestionListScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("错题列表", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "返回")
-                    }
-                },
-                actions = {
-                    if (uiState.searchQuery.isNotBlank() || uiState.selectedSubjectId != null) {
-                        TextButton(onClick = { viewModel.clearFilters() }) {
-                            Text("清除筛选")
+            if (uiState.selectionMode) {
+                TopAppBar(
+                    title = { Text("已选 ${uiState.selectedIds.size} 题", fontWeight = FontWeight.Bold) },
+                    navigationIcon = {
+                        IconButton(onClick = { viewModel.exitSelectionMode() }) {
+                            Icon(Icons.Default.Close, contentDescription = "退出多选")
                         }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
-                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
+                    },
+                    actions = {
+                        TextButton(onClick = { viewModel.selectAllVisible() }) {
+                            Text("全选")
+                        }
+                        TextButton(
+                            onClick = { viewModel.generateSheet(includeSimilar = false) },
+                            enabled = uiState.selectedIds.isNotEmpty()
+                        ) {
+                            Text("生成练习卷")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                        actionIconContentColor = MaterialTheme.colorScheme.onPrimary
+                    )
                 )
-            )
+            } else {
+                TopAppBar(
+                    title = { Text("错题列表", fontWeight = FontWeight.Bold) },
+                    navigationIcon = {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "返回")
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = { viewModel.enterSelectionMode() }) {
+                            Icon(Icons.Default.Checklist, contentDescription = "批量选择打印")
+                        }
+                        if (uiState.searchQuery.isNotBlank() || uiState.selectedSubjectId != null) {
+                            TextButton(onClick = { viewModel.clearFilters() }) {
+                                Text("清除筛选")
+                            }
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                        actionIconContentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                )
+            }
         }
     ) { padding ->
         Column(
@@ -192,18 +229,91 @@ fun QuestionListScreen(
                             section.questions,
                             key = { "q_${section.title}_${it.id}" }
                         ) { question ->
-                            QuestionCard(
-                                question = question,
-                                onClick = {
-                                    navController.navigate(Screen.QuestionDetail.createRoute(question.id))
-                                },
-                                onDelete = { viewModel.deleteQuestion(question.id) }
-                            )
+                            if (uiState.selectionMode) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Checkbox(
+                                        checked = question.id in uiState.selectedIds,
+                                        onCheckedChange = { viewModel.toggleSelection(question.id) }
+                                    )
+                                    QuestionCard(
+                                        question = question,
+                                        onClick = { viewModel.toggleSelection(question.id) },
+                                        onDelete = { viewModel.deleteQuestion(question.id) }
+                                    )
+                                }
+                            } else {
+                                QuestionCard(
+                                    question = question,
+                                    onClick = {
+                                        navController.navigate(Screen.QuestionDetail.createRoute(question.id))
+                                    },
+                                    onDelete = { viewModel.deleteQuestion(question.id) }
+                                )
+                            }
                         }
                     }
                 }
             }
         }
+    }
+
+    // 练习卷生成状态弹窗
+    when (val st = sheetState) {
+        is SheetGenerateState.Generating -> {
+            AlertDialog(
+                onDismissRequest = {},
+                title = { Text("正在生成练习卷") },
+                text = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(st.progress, fontSize = 14.sp)
+                    }
+                },
+                confirmButton = {}
+            )
+        }
+        is SheetGenerateState.Ready -> {
+            AlertDialog(
+                onDismissRequest = { viewModel.consumeSheetState() },
+                title = { Text("练习卷已生成") },
+                text = {
+                    Text(
+                        "已生成练习卷（孩子做）与答案卷（家长留存）两个 PDF。\n可通过微信发送到电脑或打印 APP 打印。",
+                        fontSize = 14.sp
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        sharePracticeSheets(context, st.files)
+                        viewModel.consumeSheetState()
+                    }) { Text("分享 / 发微信") }
+                },
+                dismissButton = {
+                    Row {
+                        TextButton(onClick = {
+                            printExerciseSheet(context, st.files.exerciseSheet)
+                            viewModel.consumeSheetState()
+                        }) { Text("直接打印") }
+                        TextButton(onClick = { viewModel.consumeSheetState() }) { Text("完成") }
+                    }
+                }
+            )
+        }
+        is SheetGenerateState.Failed -> {
+            AlertDialog(
+                onDismissRequest = { viewModel.consumeSheetState() },
+                title = { Text("生成失败") },
+                text = { Text(st.message) },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.consumeSheetState() }) { Text("知道了") }
+                }
+            )
+        }
+        SheetGenerateState.Idle -> {}
     }
 }
 
