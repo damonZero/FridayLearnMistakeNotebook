@@ -232,16 +232,16 @@ fun AiConfigDialog(
         },
         text = {
             Column {
-                // 供应商快捷模板：一键预填 Base URL 与推荐模型
+                // 供应商快捷模板：一键预填 Base URL 与推荐模型；选中态=最近应用的模板
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    listOf("DeepSeek", "火山方舟").forEach { name ->
+                    AiConfigViewModel.providerTemplates.forEach { template ->
                         FilterChip(
-                            selected = uiState.provider == name,
-                            onClick = { onProviderTemplate(name) },
-                            label = { Text(name, fontSize = 12.sp) }
+                            selected = uiState.appliedTemplate == template.name,
+                            onClick = { onProviderTemplate(template.name) },
+                            label = { Text(template.name, fontSize = 12.sp) }
                         )
                     }
                 }

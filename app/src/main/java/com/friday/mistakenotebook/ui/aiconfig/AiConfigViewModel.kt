@@ -25,11 +25,15 @@ data class AiConfigUiState(
     val isLoading: Boolean = true,
     val showAddDialog: Boolean = false,
     val editingConfig: AiConfigEntity? = null,
-    val provider: String = "DeepSeek",
+    val provider: String = AiConfigViewModel.defaultTemplate.name,
     val apiKey: String = "",
-    val baseUrl: String = "https://api.deepseek.com",
-    val modelName: String = "deepseek-v4-flash-vision-exp",
+    val baseUrl: String = AiConfigViewModel.defaultTemplate.baseUrl,
+    val modelName: String = AiConfigViewModel.defaultTemplate.visionModel,
     val taskType: AiTaskType = AiTaskType.OCR,
+    // 最近一次应用的供应商模板；手改 provider/baseUrl 后清除，chip 选中态只认它而非自由文本
+    val appliedTemplate: String? = AiConfigViewModel.defaultTemplate.name,
+    // 用户是否手改过模型名（改过则任务切换不再自动跟随）
+    val modelCustomized: Boolean = false,
     val testResult: TestResult? = null,
     val isTesting: Boolean = false
 ) {
@@ -64,11 +68,15 @@ class AiConfigViewModel @Inject constructor(
             it.copy(
                 showAddDialog = true,
                 editingConfig = null,
-                provider = "DeepSeek",
+                provider = AiConfigViewModel.defaultTemplate.name,
                 apiKey = "",
-                baseUrl = "https://api.deepseek.com",
-                modelName = "deepseek-v4-flash-vision-exp",
+                baseUrl = AiConfigViewModel.defaultTemplate.baseUrl,
+                modelName = AiConfigViewModel.defaultModelFor(
+                    AiConfigViewModel.defaultTemplate, AiTaskType.OCR
+                ),
                 taskType = AiTaskType.OCR,
+                appliedTemplate = AiConfigViewModel.defaultTemplate.name,
+                modelCustomized = false,
                 testResult = null,
                 isTesting = false
             )
@@ -76,6 +84,9 @@ class AiConfigViewModel @Inject constructor(
     }
 
     fun showEditDialog(config: AiConfigEntity) {
+        // 仅当 provider+baseUrl 与模板完全一致时才点亮对应 chip，避免误导
+        val matchedTemplate = AiConfigViewModel.providerTemplates
+            .firstOrNull { it.name == config.provider && it.baseUrl == config.baseUrl }?.name
         _uiState.update {
             it.copy(
                 showAddDialog = true,
@@ -85,6 +96,8 @@ class AiConfigViewModel @Inject constructor(
                 baseUrl = config.baseUrl,
                 modelName = config.modelName,
                 taskType = config.taskType,
+                appliedTemplate = matchedTemplate,
+                modelCustomized = true,
                 testResult = null,
                 isTesting = false
             )
@@ -103,17 +116,20 @@ class AiConfigViewModel @Inject constructor(
     }
 
     fun updateProvider(provider: String) {
-        _uiState.update { it.copy(provider = provider) }
+        // 手改提供商文本 = 脱离模板，chip 选中态随之熄灭
+        _uiState.update { it.copy(provider = provider, appliedTemplate = null) }
     }
 
-    /** 供应商模板：一键预填 Base URL 与当前任务的推荐模型 */
+    /** 供应商模板：一键预填 Base URL 与当前任务的推荐模型（chip 点击为显式动作） */
     fun applyProviderTemplate(provider: String) {
-        val template = providerTemplates.firstOrNull { it.name == provider } ?: return
+        val template = AiConfigViewModel.providerTemplates.firstOrNull { it.name == provider } ?: return
         _uiState.update { st ->
             st.copy(
                 provider = template.name,
                 baseUrl = template.baseUrl,
-                modelName = if (st.taskType == AiTaskType.OCR) template.visionModel else template.textModel,
+                modelName = AiConfigViewModel.defaultModelFor(template, st.taskType),
+                appliedTemplate = template.name,
+                modelCustomized = false,
                 testResult = null
             )
         }
@@ -124,33 +140,31 @@ class AiConfigViewModel @Inject constructor(
     }
 
     fun updateBaseUrl(baseUrl: String) {
-        _uiState.update { it.copy(baseUrl = baseUrl, testResult = null) }
+        _uiState.update { it.copy(baseUrl = baseUrl, appliedTemplate = null, testResult = null) }
     }
 
     fun updateModelName(modelName: String) {
-        _uiState.update { it.copy(modelName = modelName, testResult = null) }
+        _uiState.update { it.copy(modelName = modelName, modelCustomized = true, testResult = null) }
     }
 
     fun updateTaskType(taskType: AiTaskType) {
         _uiState.update { st ->
-            val template = providerTemplates.firstOrNull { it.name == st.provider }
-            if (template == null || st.editingConfig != null) {
+            val template = AiConfigViewModel.providerTemplates
+                .firstOrNull { it.name == st.appliedTemplate }
+            if (template == null || st.modelCustomized) {
+                // 未应用模板或用户手改过模型名：只切任务，不动模型
                 return@update st.copy(taskType = taskType)
             }
-            // 仅当模型名还是模板默认值时跟随任务类型切换，不覆盖用户手输的模型
-            val currentIsTemplateDefault =
-                st.modelName == template.visionModel || st.modelName == template.textModel
-            val suggested = if (taskType == AiTaskType.OCR) template.visionModel else template.textModel
             st.copy(
                 taskType = taskType,
-                modelName = if (currentIsTemplateDefault) suggested else st.modelName
+                modelName = AiConfigViewModel.defaultModelFor(template, taskType)
             )
         }
     }
 
     fun saveConfig() {
         val state = _uiState.value
-        val provider = state.provider.trim().ifBlank { "DeepSeek" }
+        val provider = state.provider.trim().ifBlank { AiConfigViewModel.defaultTemplate.name }
         val apiKey = state.apiKey.trim()
         val baseUrl = state.baseUrl.trim()
         val modelName = state.modelName.trim()
@@ -250,5 +264,11 @@ class AiConfigViewModel @Inject constructor(
                 textModel = "doubao-pro-32k"
             )
         )
+
+        /** 默认模板：新增配置与兜底都以它为基准，单一来源 */
+        val defaultTemplate: ProviderTemplate get() = providerTemplates.first()
+
+        fun defaultModelFor(template: ProviderTemplate, taskType: AiTaskType): String =
+            if (taskType == AiTaskType.OCR) template.visionModel else template.textModel
     }
 }

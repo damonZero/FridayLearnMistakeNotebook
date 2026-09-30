@@ -23,7 +23,8 @@
 
 ## 外部服务
 
-- **火山方舟（豆包 Vision）** — OCR，OpenAI 兼容 `/chat/completions`，BaseUrl/Key/Model 全部由用户在 ai_configs 表配置，无内置默认端点
+- **DeepSeek 官方 API（默认）** — 识图 `deepseek-v4-flash-vision-exp`、推理 `deepseek-v4-flash`，OpenAI 兼容 `/chat/completions`
+- **火山方舟（备选模板）** — 豆包 Vision，同协议；两者均由内置供应商模板预填 baseUrl/推荐模型，Key 由用户在 ai_configs 表填写
 - 无其他第三方服务；无 Analytics / Crash 上报
 
 ## Android 权限（AndroidManifest.xml）

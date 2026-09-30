@@ -48,7 +48,7 @@ class AiUsageLogger @Inject constructor(private val aiUsageLogDao: AiUsageLogDao
                     modelName = config.modelName,
                     inputTokens = inputTokens,
                     outputTokens = outputTokens,
-                    estimatedCost = estimateCost(config.modelName, inputTokens, outputTokens)
+                    estimatedCost = estimateCost(config.provider, config.modelName, inputTokens, outputTokens)
                 )
             )
         } catch (e: Exception) {
@@ -57,13 +57,21 @@ class AiUsageLogger @Inject constructor(private val aiUsageLogDao: AiUsageLogDao
     }
 
     /**
-     * 按模型名估算本次费用（元），单价由各官方每 100 万 tokens 定价换算：
-     * DeepSeek V4-Flash（含 vision-exp，2026-09-10 起空闲时段）：输入 ¥1/M、输出 ¥4/M（高峰时段 ×2，此处按空闲估）
+     * 按供应商优先计价（供应商托管的模型名可能与别家撞名，如火山托管的 deepseek），
+     * 自定义供应商退回模型名匹配；无法识别不计费。
+     * 单价为各官方每 100 万 tokens 定价：
+     * DeepSeek V4-Flash（含 vision-exp，2026-09-10 起空闲时段）：输入 ¥1/M、输出 ¥4/M（高峰 ×2，此处按空闲估）
      * 豆包(火山方舟)：输入 ¥8/M、输出 ¥20/M
-     * 其他模型不计费
      */
-    private fun estimateCost(modelName: String, inputTokens: Int, outputTokens: Int): Double {
+    private fun estimateCost(
+        provider: String,
+        modelName: String,
+        inputTokens: Int,
+        outputTokens: Int
+    ): Double {
         val (inputPrice, outputPrice) = when {
+            provider == "DeepSeek" -> 0.000001 to 0.000004
+            provider == "火山方舟" -> 0.000008 to 0.00002
             modelName.contains("deepseek", ignoreCase = true) -> 0.000001 to 0.000004
             modelName.contains("doubao", ignoreCase = true) ||
                 modelName.contains("ep-") -> 0.000008 to 0.00002

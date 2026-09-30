@@ -2,7 +2,7 @@
 
 # 系统架构 — 周周错题本 (FridayLearnMistakeNotebook)
 
-小学生智能错题本 Android APP。MVVM + Clean Architecture，数据全本地，AI 能力（OCR）由用户自配 API Key 调用火山方舟（OpenAI 兼容协议）。
+小学生智能错题本 Android APP。MVVM + Clean Architecture，数据全本地，AI 能力（OCR/分析/出题）由用户自配 API Key 调用 DeepSeek（默认模板）或火山方舟（OpenAI 兼容协议）。
 
 ## 分层图
 

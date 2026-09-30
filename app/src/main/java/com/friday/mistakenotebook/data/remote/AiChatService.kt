@@ -110,7 +110,7 @@ class AiChatService @Inject constructor(
                         response.code == 401 || response.code == 403 ->
                             "API Key 无效或无权限"
                         response.code == 404 ->
-                            "地址或模型名错误，请检查 baseUrl（一般以 /v1 结尾）与模型名"
+                            "地址或模型名错误，请检查 Base URL 与模型名称是否匹配（可用模板一键重新预填）"
                         response.code == 429 ->
                             "调用频率超限，请稍后再试"
                         else ->
