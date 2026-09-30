@@ -12,9 +12,10 @@ VolcanoOcrService.recognizeText(imageBase64) : OcrResult
   → 解析 usage.tokens → aiUsageLogDao.insertUsageLog（费用按模型名估算，失败不影响识别）
 
 AiChatService (data/remote/AiChatService.kt)
-  → chat(taskType, prompt): Result<String>，按 ANALYSIS / SIMILAR_QUESTION 任务读配置
+  → chat(taskType, prompt) / chatWithImage(taskType, imageBase64, prompt)，按任务类型读配置
+  → analyzeQuestionImage(image) → QuestionExtraction(题干/学生作答/多解法参考答案)——拍照录入预填表单
   → analyzeKnowledge(...) → KnowledgeAnalysis(知识点/错因/分析)
-  → generateSimilarQuestions(...) → List<GeneratedQuestion>
+  → generateSimilarQuestions(...) → List<GeneratedQuestion>（练习模式/复习页"举一反三"）
 ```
 
 AI 分析结果存 questions.aiAnalysis（详情页展示/重分析覆盖）；相似题仅练习会话内使用不入库。

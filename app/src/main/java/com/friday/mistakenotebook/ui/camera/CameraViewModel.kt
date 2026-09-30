@@ -5,6 +5,7 @@ import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.friday.mistakenotebook.data.remote.AiChatService
 import com.friday.mistakenotebook.data.remote.OcrResult
 import com.friday.mistakenotebook.data.remote.OcrService
 import com.friday.mistakenotebook.util.ImageUtil
@@ -28,6 +29,9 @@ data class CameraUiState(
     // 本次图片压缩存盘后的绝对路径（filesDir/images），失败为 null，不影响 OCR
     val imagePath: String? = null,
     val ocrResult: OcrResult? = null,
+    // AI 识题整理出的参考答案（多解法）与学生作答，失败/缺失为空串
+    val answer: String = "",
+    val userAnswer: String = "",
     val isProcessing: Boolean = false,
     val error: String? = null,
     val isOcrComplete: Boolean = false,
@@ -38,6 +42,7 @@ data class CameraUiState(
 class CameraViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val ocrService: OcrService,
+    private val aiChatService: AiChatService,
     private val imageUtil: ImageUtil
 ) : ViewModel() {
 
@@ -107,22 +112,41 @@ class CameraViewModel @Inject constructor(
                 if (seq != captureSeq) return@launch
                 Log.d("OCR_CAMERA", "图片处理完成 base64=${base64.length} imagePath=$savedPath")
 
-                Log.d("OCR_CAMERA", "开始调用 OCR 服务...")
-                val result = ocrService.recognizeText(base64)
+                // AI 识题优先：一次多模态调用完成"题干提取 + 学生作答提取 + 多解法参考答案"；
+                // 失败回退纯 OCR（只填题干，答案留空手动输入）
+                val extraction = aiChatService.analyzeQuestionImage(base64)
                 if (seq != captureSeq) return@launch
-                Log.d("OCR_CAMERA", "OCR 识别完成: text=${result.text.take(50)}..., confidence=${result.confidence}")
+                val result: OcrResult
+                var answer = ""
+                var userAnswer = ""
+                if (extraction.isSuccess) {
+                    val ex = extraction.getOrThrow()
+                    Log.d("OCR_CAMERA", "AI 识题成功: content=${ex.content.take(50)}...")
+                    result = OcrResult(text = ex.content, confidence = 0.95f)
+                    answer = ex.answer
+                    userAnswer = ex.userAnswer
+                } else {
+                    Log.w("OCR_CAMERA", "AI 识题失败，回退纯 OCR: ${extraction.exceptionOrNull()?.message}")
+                    result = ocrService.recognizeText(base64)
+                    if (seq != captureSeq) return@launch
+                }
+                Log.d("OCR_CAMERA", "识别完成: text=${result.text.take(50)}..., confidence=${result.confidence}")
 
-                // imagePath 与识别结果在同一次 update 落位，避免图文错配
+                // imagePath/answer 与识别结果在同一次 update 落位，避免错配
                 _uiState.update {
                     it.copy(
                         ocrResult = result,
                         imagePath = savedPath,
+                        answer = answer,
+                        userAnswer = userAnswer,
                         isProcessing = false,
                         isOcrComplete = true,
                         ocrHint = when {
                             result.confidence <= 0f && result.text.contains("为空") ->
                                 "这次没有识别到文字。请检查图片清晰度、光线或裁剪范围。"
                             result.confidence <= 0f -> "识别结果异常。你可以重拍，或者直接手动输入。"
+                            answer.isNotBlank() ->
+                                "已识别题目并整理参考答案${if (userAnswer.isNotBlank()) "与学生作答" else ""}，返回录入页可核对修改。"
                             else -> "识别完成。可直接使用结果，或先检查内容再保存。"
                         }
                     )

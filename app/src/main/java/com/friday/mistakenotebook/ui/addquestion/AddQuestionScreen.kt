@@ -48,11 +48,15 @@ fun AddQuestionScreen(
     LaunchedEffect(savedStateHandle) {
         val result = savedStateHandle?.get<String>("ocr_result")
         if (!result.isNullOrBlank()) {
-            // 与 ocr_result 配对回传的原图路径，可能不存在（存盘失败时相机页不会设置）
+            // 与 ocr_result 配对回传的原图路径与 AI 整理的答案，可能不存在（纯 OCR 回退时不设置）
             val imagePath = savedStateHandle?.get<String>("ocr_image_path")
-            viewModel.createQuestionDraftFromOcr(result, imagePath)
+            val answer = savedStateHandle?.get<String>("ocr_answer")
+            val userAnswer = savedStateHandle?.get<String>("ocr_user_answer")
+            viewModel.createQuestionDraftFromOcr(result, imagePath, answer, userAnswer)
             savedStateHandle?.remove<String>("ocr_result")
             savedStateHandle?.remove<String>("ocr_image_path")
+            savedStateHandle?.remove<String>("ocr_answer")
+            savedStateHandle?.remove<String>("ocr_user_answer")
         }
     }
 

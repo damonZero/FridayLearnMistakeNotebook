@@ -247,10 +247,18 @@ fun CameraScreen(
                     Button(
                         onClick = {
                             // 在 onOcrComplete（内部会 set "ocr_result" 并 popBackStack）之前，
-                            // 先把原图路径一并回传给添加页；无图不设该 key
+                            // 先把原图路径与 AI 整理的答案一并回传给添加页；为空不设对应 key
                             uiState.imagePath?.let { path ->
                                 navController.previousBackStackEntry?.savedStateHandle
                                     ?.set("ocr_image_path", path)
+                            }
+                            uiState.answer.takeIf { it.isNotBlank() }?.let { answer ->
+                                navController.previousBackStackEntry?.savedStateHandle
+                                    ?.set("ocr_answer", answer)
+                            }
+                            uiState.userAnswer.takeIf { it.isNotBlank() }?.let { userAnswer ->
+                                navController.previousBackStackEntry?.savedStateHandle
+                                    ?.set("ocr_user_answer", userAnswer)
                             }
                             onOcrComplete(uiState.ocrResult!!.text)
                         },

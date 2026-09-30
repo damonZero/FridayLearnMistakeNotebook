@@ -37,6 +37,15 @@ data class GeneratedQuestion(
 )
 
 /**
+ * AI 识题结果：题干、学生作答（可为空）、参考答案（含多解法思路）
+ */
+data class QuestionExtraction(
+    val content: String,
+    val userAnswer: String,
+    val answer: String
+)
+
+/**
  * 通用 AI 文本对话服务：按任务类型读取启用配置，POST {baseUrl}/chat/completions（OpenAI 兼容）。
  * 所有计费调用统一写用量日志（含失败记 0），瞬时网络错误自动重试一次。
  */
@@ -61,7 +70,26 @@ class AiChatService @Inject constructor(
                 ?: return@withContext Result.failure(
                     IllegalStateException("请先在设置中配置该任务的 AI 模型")
                 )
-            chatInternal(config, taskType, userPrompt, maxTokens)
+            chatInternal(config, taskType, userPrompt, maxTokens, imageBase64 = null)
+        }
+    }
+
+    /**
+     * 图文混合对话：图片 + 文本一起发送（识题 = 提取题干 + 学生作答 + AI 解答一步完成）。
+     * 需要 OCR 任务配置的多模态模型
+     */
+    suspend fun chatWithImage(
+        taskType: AiTaskType,
+        imageBase64: String,
+        userPrompt: String,
+        maxTokens: Int = 2048
+    ): Result<String> {
+        return withContext(Dispatchers.IO) {
+            val config = resolveConfig(taskType)
+                ?: return@withContext Result.failure(
+                    IllegalStateException("请先在设置中配置该任务的 AI 模型")
+                )
+            chatInternal(config, taskType, userPrompt, maxTokens, imageBase64)
         }
     }
 
@@ -77,7 +105,8 @@ class AiChatService @Inject constructor(
         config: com.friday.mistakenotebook.data.local.entity.AiConfigEntity,
         taskType: AiTaskType,
         userPrompt: String,
-        maxTokens: Int
+        maxTokens: Int,
+        imageBase64: String?
     ): Result<String> {
         return try {
             val jsonBody = JsonObject().apply {
@@ -88,7 +117,36 @@ class AiChatService @Inject constructor(
                         add(
                             JsonObject().apply {
                                 addProperty("role", "user")
-                                addProperty("content", userPrompt)
+                                if (imageBase64 != null) {
+                                    // OpenAI 兼容的多模态 content：图片在前、文本在后
+                                    add(
+                                        "content",
+                                        JsonArray().apply {
+                                            add(
+                                                JsonObject().apply {
+                                                    addProperty("type", "image_url")
+                                                    add(
+                                                        "image_url",
+                                                        JsonObject().apply {
+                                                            addProperty(
+                                                                "url",
+                                                                "data:image/jpeg;base64,$imageBase64"
+                                                            )
+                                                        }
+                                                    )
+                                                }
+                                            )
+                                            add(
+                                                JsonObject().apply {
+                                                    addProperty("type", "text")
+                                                    addProperty("text", userPrompt)
+                                                }
+                                            )
+                                        }
+                                    )
+                                } else {
+                                    addProperty("content", userPrompt)
+                                }
                             }
                         )
                     }
@@ -210,6 +268,46 @@ class AiChatService @Inject constructor(
         return chat(AiTaskType.SIMILAR_QUESTION, prompt, maxTokens = 2048).mapCatching { content ->
             parseGeneratedQuestions(content)
                 ?: throw IllegalStateException("AI 返回的相似题内容无法解析，请重试")
+        }
+    }
+
+    /**
+     * AI 识题：一次视觉调用完成"提取题干 + 提取学生手写作答 + 给出多解法参考答案"，
+     * 供拍照录入页直接预填表单。失败时调用方回退纯 OCR
+     */
+    suspend fun analyzeQuestionImage(imageBase64: String): Result<QuestionExtraction> {
+        val prompt = buildString {
+            appendLine("这是一张小学生的错题照片，可能包含印刷体题目和学生手写的作答。请完成：")
+            appendLine("1. 提取题目内容（题干与选项，不要包含学生手写的作答）")
+            appendLine("2. 如果照片里有学生手写的答案或解题过程，原样提取为学生的答案；没有则输出空字符串")
+            appendLine("3. 给出正确答案与解析：尽量提供两种以上解法思路（用 1. 2. 编号区分），语言适合小学生理解")
+            appendLine()
+            appendLine("请只输出一个 JSON 对象，不要输出任何其他文字或代码块标记，格式：")
+            appendLine("""{"content": "题目内容", "userAnswer": "学生的答案，没有则留空", "answer": "正确答案与多种解法思路"}""")
+        }
+        return chatWithImage(AiTaskType.OCR, imageBase64, prompt, maxTokens = 2048).mapCatching { content ->
+            parseQuestionExtraction(content)
+                ?: throw IllegalStateException("AI 返回的识题内容无法解析，请重试")
+        }
+    }
+
+    /** 解析识题 JSON（容错：剥代码块、截取首尾大括号之间内容） */
+    private fun parseQuestionExtraction(content: String): QuestionExtraction? {
+        val json = extractBetween(content, '{', '}') ?: return null
+        return try {
+            val obj = JsonParser.parseString(json).asJsonObject
+            fun read(name: String): String =
+                obj.get(name)?.takeIf { it.isJsonPrimitive }?.asString?.trim().orEmpty()
+            val questionContent = read("content")
+            if (questionContent.isBlank()) null else {
+                QuestionExtraction(
+                    content = questionContent,
+                    userAnswer = read("userAnswer"),
+                    answer = read("answer")
+                )
+            }
+        } catch (e: Exception) {
+            null
         }
     }
 

@@ -77,7 +77,12 @@ fun ReviewScreen(
                     uiState = uiState,
                     onShowAnswer = { viewModel.showAnswer() },
                     onCorrect = { viewModel.markCorrect() },
-                    onIncorrect = { viewModel.markIncorrect() }
+                    onIncorrect = { viewModel.markIncorrect() },
+                    onPractice = {
+                        uiState.questions.getOrNull(uiState.currentIndex)?.let { question ->
+                            navController.navigate(Screen.Practice.createRoute(question.id))
+                        }
+                    }
                 )
             }
         }
@@ -113,7 +118,8 @@ fun ReviewContent(
     uiState: ReviewUiState,
     onShowAnswer: () -> Unit,
     onCorrect: () -> Unit,
-    onIncorrect: () -> Unit
+    onIncorrect: () -> Unit,
+    onPractice: () -> Unit
 ) {
     val question = uiState.questions[uiState.currentIndex]
 
@@ -236,6 +242,18 @@ fun ReviewContent(
         Spacer(modifier = Modifier.height(16.dp))
 
         if (uiState.isAnswerShown) {
+            // 举一反三：看完答案顺手练相似题，巩固后再自评
+            OutlinedButton(
+                onClick = onPractice,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Lightbulb, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("举一反三 · 练相似题", fontSize = 14.sp)
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)

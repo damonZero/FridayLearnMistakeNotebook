@@ -96,10 +96,25 @@ class AddQuestionViewModel @Inject constructor(
         }
     }
 
-    fun createQuestionDraftFromOcr(content: String, imagePath: String? = null) {
+    fun createQuestionDraftFromOcr(
+        content: String,
+        imagePath: String? = null,
+        answer: String = "",
+        userAnswer: String = ""
+    ) {
         val normalizedContent = content.trim()
         if (normalizedContent.isBlank()) return
-        applyOcrResult(normalizedContent, imagePath)
+        // 题干、学生作答、参考答案一起预填；答案可留空由用户核对补充
+        _uiState.update {
+            it.copy(
+                content = normalizedContent,
+                imagePath = imagePath,
+                answer = answer.trim(),
+                userAnswer = userAnswer.trim(),
+                ocrApplied = true,
+                isSaved = false
+            )
+        }
     }
 
     fun saveQuestion() {
