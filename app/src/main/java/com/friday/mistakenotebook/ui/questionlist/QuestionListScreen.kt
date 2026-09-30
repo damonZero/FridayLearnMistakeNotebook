@@ -1,5 +1,6 @@
 package com.friday.mistakenotebook.ui.questionlist
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -43,12 +44,65 @@ fun QuestionListScreen(
     var showSheetConfig by remember { mutableStateOf(false) }
     var includeSimilar by remember { mutableStateOf(false) }
     var forceRefresh by remember { mutableStateOf(false) }
+    // 多选操作栏选择的动作：生成完成后自动触发（share / print）
+    var pendingAction by remember { mutableStateOf<String?>(null) }
+
+    // 生成完成 → 自动执行选定的动作（分享练习卷 / 直接打印）
+    LaunchedEffect(sheetState, pendingAction) {
+        val st = sheetState
+        if (st is SheetGenerateState.Ready && pendingAction != null) {
+            when (pendingAction) {
+                "share" -> shareSheetFile(context, st.files.exerciseSheet)
+                "print" -> printExerciseSheet(context, st.files.exerciseSheet)
+            }
+            pendingAction = null
+        }
+    }
 
     LaunchedEffect(subjectId) {
         viewModel.selectSubject(if (subjectId == -1L) null else subjectId)
     }
 
     Scaffold(
+        bottomBar = {
+            if (uiState.selectionMode) {
+                // 多选操作栏：全选（当前筛选/分类结果）、分享、打印
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { viewModel.selectAllVisible() },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("全选")
+                    }
+                    Button(
+                        onClick = {
+                            pendingAction = "share"
+                            showSheetConfig = true
+                        },
+                        enabled = uiState.selectedIds.isNotEmpty(),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("分享")
+                    }
+                    Button(
+                        onClick = {
+                            pendingAction = "print"
+                            showSheetConfig = true
+                        },
+                        enabled = uiState.selectedIds.isNotEmpty(),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("打印")
+                    }
+                }
+            }
+        },
         topBar = {
             if (uiState.selectionMode) {
                 TopAppBar(
@@ -58,19 +112,10 @@ fun QuestionListScreen(
                             Icon(Icons.Default.Close, contentDescription = "退出多选")
                         }
                     },
-                    actions = {
-                        TextButton(onClick = { viewModel.selectAllVisible() }) {
-                            Text("全选")
-                        }
-                        TextButton(onClick = { showSheetConfig = true }) {
-                            Text("生成练习卷")
-                        }
-                    },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                        navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
-                        actionIconContentColor = MaterialTheme.colorScheme.onPrimary
+                        navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 )
             } else {
@@ -261,7 +306,7 @@ fun QuestionListScreen(
     if (showSheetConfig) {
         AlertDialog(
             onDismissRequest = { showSheetConfig = false },
-            title = { Text("生成练习卷（${uiState.selectedIds.size} 题）") },
+            title = { Text(if (pendingAction == "print") "生成并打印（${uiState.selectedIds.size} 题）" else "生成并分享（${uiState.selectedIds.size} 题）") },
             text = {
                 Column {
                     Row(verticalAlignment = Alignment.CenterVertically) {
