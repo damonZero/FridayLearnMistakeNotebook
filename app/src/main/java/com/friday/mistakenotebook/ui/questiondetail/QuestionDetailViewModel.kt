@@ -98,11 +98,15 @@ class QuestionDetailViewModel @Inject constructor(
      * 生成单题练习卷（题卷+答案卷），默认包含举一反三
      */
     fun generatePracticeSheet() {
-        val question = _uiState.value.question ?: return
         if (_sheetState.value is SheetGenerateState.Generating) return
-        _sheetState.value = SheetGenerateState.Generating("正在生成举一反三…")
+        _sheetState.value = SheetGenerateState.Generating("正在准备…")
         viewModelScope.launch {
             try {
+                // 重新读取最新数据：练习页可能在进入本页之后才生成/刷新过缓存，
+                // 用 init 时的陈旧快照会读不到缓存并把它覆写掉
+                val question = questionRepository.getQuestionById(questionId)
+                    ?: _uiState.value.question
+                    ?: return@launch
                 // 优先用已保存的举一反三（与练习页一致），没有才现场生成并保存
                 val cached = question.similarQuestionsJson
                     ?.takeIf { it.isNotBlank() }
@@ -112,19 +116,9 @@ class QuestionDetailViewModel @Inject constructor(
                 val similar = if (cached.isNotEmpty()) {
                     cached
                 } else {
-                    aiChatService.generateSimilarQuestions(question.content)
-                        .onFailure { simFailed = true }
-                        .getOrElse { emptyList() }
-                        .also { list ->
-                            if (list.isNotEmpty()) {
-                                runCatching {
-                                    questionRepository.updateSimilarQuestions(
-                                        question.id,
-                                        SimilarQuestionCodec.encode(list)
-                                    )
-                                }
-                            }
-                        }
+                    val gen = aiChatService.generateAndCacheSimilarQuestions(questionRepository, question)
+                    if (gen.errorMessage != null) simFailed = true
+                    gen.questions
                 }
                 _sheetState.value = SheetGenerateState.Generating("正在排版生成 PDF…")
                 val title = "错题练习卷${question.knowledgePoint?.takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""}"
@@ -133,6 +127,8 @@ class QuestionDetailViewModel @Inject constructor(
                     includeSimilar = true,
                     title = title
                 )
+                // 同步本页快照，避免后续操作继续使用陈旧数据
+                _uiState.update { it.copy(question = question) }
                 _sheetState.value = SheetGenerateState.Ready(
                     files,
                     note = if (simFailed) "注意：举一反三生成失败，本卷仅含原错题" else null

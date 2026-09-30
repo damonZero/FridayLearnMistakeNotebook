@@ -73,7 +73,7 @@ fun PracticeScreen(
                     }
                 }
             }
-            uiState.error != null -> {
+            uiState.error != null && uiState.questions.isEmpty() -> {
                 PracticeErrorContent(
                     modifier = Modifier.padding(padding),
                     error = uiState.error!!,
@@ -147,6 +147,15 @@ fun PracticeContent(
             modifier = Modifier.fillMaxWidth(),
             color = Secondary
         )
+        // 会话中刷新失败：保留练习内容，仅提示
+        uiState.refreshError?.let { msg ->
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "⚠️ $msg",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "第 ${uiState.currentIndex + 1} / ${uiState.questions.size} 题",

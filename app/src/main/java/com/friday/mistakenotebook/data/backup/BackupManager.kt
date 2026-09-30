@@ -184,8 +184,16 @@ class BackupManager @Inject constructor(
                     }
                 }
                 questions.forEach { question ->
-                    if (database.questionDao().getQuestionById(question.id) != null) {
-                        database.questionDao().updateQuestion(question)
+                    val local = database.questionDao().getQuestionById(question.id)
+                    if (local != null) {
+                        // 旧版备份可能缺失新增列（null），合并时保留本地已有值，避免静默清空
+                        val merged = question.copy(
+                            imagePath = question.imagePath ?: local.imagePath,
+                            aiAnalysis = question.aiAnalysis ?: local.aiAnalysis,
+                            knowledgePoint = question.knowledgePoint ?: local.knowledgePoint,
+                            similarQuestions = question.similarQuestions ?: local.similarQuestions
+                        )
+                        database.questionDao().updateQuestion(merged)
                     } else {
                         database.questionDao().insertQuestion(question)
                     }

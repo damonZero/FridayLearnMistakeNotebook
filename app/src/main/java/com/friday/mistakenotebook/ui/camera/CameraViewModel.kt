@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.friday.mistakenotebook.data.remote.AiChatService
+import com.friday.mistakenotebook.data.remote.AiEmptyContentException
 import com.friday.mistakenotebook.data.remote.OcrResult
 import com.friday.mistakenotebook.data.remote.OcrService
 import com.friday.mistakenotebook.util.ImageUtil
@@ -125,9 +126,6 @@ class CameraViewModel @Inject constructor(
                 val failure = extraction.exceptionOrNull()
                 val isParseFailure = failure is IllegalStateException &&
                     failure.message?.contains("无法解析") == true
-                val isEmptyContent = failure is IOException &&
-                    (failure.message?.contains("格式异常") == true ||
-                        failure.message?.contains("未找到回复") == true)
                 if (extraction.isSuccess) {
                     val ex = extraction.getOrThrow()
                     Log.d("OCR_CAMERA", "AI 识题成功: content=${ex.content.take(50)}...")
@@ -135,7 +133,7 @@ class CameraViewModel @Inject constructor(
                     answer = ex.answer
                     userAnswer = ex.userAnswer
                     knowledgePoint = ex.knowledgePoint
-                } else if (isParseFailure || isEmptyContent) {
+                } else if (isParseFailure || failure is AiEmptyContentException) {
                     // 结构化输出失败但网络通：回退纯 OCR 拿原始文本仍有价值
                     Log.w("OCR_CAMERA", "AI 识题输出异常，回退纯 OCR: ${failure?.message}")
                     result = ocrService.recognizeText(base64)

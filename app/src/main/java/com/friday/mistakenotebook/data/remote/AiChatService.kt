@@ -22,6 +22,26 @@ import javax.inject.Singleton
 
 private const val TAG = "AI_CHAT"
 
+/** 正文为空（输出预算被推理耗尽等）：与网络错误区分，便于上层选择回退策略 */
+class AiEmptyContentException(message: String) : IOException(message)
+
+/** 从 JSON 对象构建 GeneratedQuestion（解析与持久化解码共用，避免双源漂移） */
+internal fun generatedQuestionFrom(obj: com.google.gson.JsonObject): GeneratedQuestion? {
+    val content = obj.get("content")?.takeIf { it.isJsonPrimitive }?.asString?.trim().orEmpty()
+    if (content.isBlank()) return null
+    return GeneratedQuestion(
+        content = content,
+        answer = obj.get("answer")?.takeIf { it.isJsonPrimitive }?.asString?.trim().orEmpty(),
+        variation = obj.get("variation")?.takeIf { it.isJsonPrimitive }?.asString?.trim().orEmpty()
+    )
+}
+
+/** 生成结果：题目列表 + 错误信息（null 表示成功） */
+data class SimilarGenerationResult(
+    val questions: List<GeneratedQuestion>,
+    val errorMessage: String?
+)
+
 /**
  * 知识点分析结果
  */
@@ -63,13 +83,7 @@ object SimilarQuestionCodec {
     fun decode(json: String): List<GeneratedQuestion> = try {
         JsonParser.parseString(json).asJsonArray.mapNotNull { element ->
             try {
-                val obj = element.asJsonObject
-                val content = obj.get("content")?.takeIf { it.isJsonPrimitive }?.asString?.trim().orEmpty()
-                if (content.isBlank()) null else GeneratedQuestion(
-                    content = content,
-                    answer = obj.get("answer")?.takeIf { it.isJsonPrimitive }?.asString?.trim().orEmpty(),
-                    variation = obj.get("variation")?.takeIf { it.isJsonPrimitive }?.asString?.trim().orEmpty()
-                )
+                generatedQuestionFrom(element.asJsonObject)
             } catch (e: Exception) {
                 null
             }
@@ -95,6 +109,9 @@ class AiChatService @Inject constructor(
         .connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(120, TimeUnit.SECONDS)
         .build()
+
+    // 已确认不支持 JSON 模式的端点（避免每次失败都重新探 4xx）
+    private val jsonModeUnsupportedEndpoints = mutableSetOf<String>()
 
     /**
      * 通用文本对话：按 taskType 读启用配置（无则返回失败），
@@ -129,9 +146,32 @@ class AiChatService @Inject constructor(
         }
     }
 
+    /**
+     * 生成并持久化举一反三（练习页/详情打印/列表批量三个入口共用，
+     * 避免缓存读写惯语漂移）。成功落库并返回题目；失败返回 errorMessage
+     */
+    suspend fun generateAndCacheSimilarQuestions(
+        questionRepository: com.friday.mistakenotebook.domain.repository.QuestionRepository,
+        question: com.friday.mistakenotebook.domain.model.Question
+    ): SimilarGenerationResult {
+        val result = generateSimilarQuestions(question.content)
+        val list = result.getOrElse { emptyList() }
+        if (list.isNotEmpty()) {
+            runCatching {
+                questionRepository.updateSimilarQuestions(
+                    question.id,
+                    SimilarQuestionCodec.encode(list)
+                )
+            }
+        }
+        return SimilarGenerationResult(
+            questions = list,
+            errorMessage = if (result.isSuccess) null else result.exceptionOrNull()?.message ?: "生成失败"
+        )
+    }
+
     /** SIMILAR_QUESTION 向下兼容更名前的 GENERATE 配置，避免老用户配好的槽位读不到 */
-    private suspend fun resolveConfig(taskType: AiTaskType) = when (taskType) {
-        AiTaskType.SIMILAR_QUESTION ->
+    private suspend fun resolveConfig(taskType: AiTaskType) = when (taskType) {        AiTaskType.SIMILAR_QUESTION ->
             aiConfigDao.getEnabledConfigByTaskType(AiTaskType.SIMILAR_QUESTION)
                 ?: aiConfigDao.getEnabledConfigByTaskType(AiTaskType.GENERATE)
         else -> aiConfigDao.getEnabledConfigByTaskType(taskType)
@@ -145,6 +185,17 @@ class AiChatService @Inject constructor(
         imageBase64: String?,
         jsonMode: Boolean = false
     ): Result<String> {
+        // 火山预设模型输出上限 4096（服务端硬拒不降级），按模型名钳制
+        val effectiveTokens = if (
+            config.modelName.contains("doubao", ignoreCase = true) ||
+            config.modelName.contains("ep-")
+        ) {
+            minOf(maxTokens, 4096)
+        } else {
+            maxTokens
+        }
+        // JSON 模式若该端点不支持（4xx 参数错误），记住 baseUrl 不再尝试
+        val useJsonMode = jsonMode && config.baseUrl !in jsonModeUnsupportedEndpoints
         return try {
             val jsonBody = JsonObject().apply {
                 addProperty("model", config.modelName)
@@ -188,8 +239,8 @@ class AiChatService @Inject constructor(
                         )
                     }
                 )
-                addProperty("max_tokens", maxTokens)
-                if (jsonMode) {
+                addProperty("max_tokens", effectiveTokens)
+                if (useJsonMode) {
                     // JSON 模式：端点不支持时 HTTP 4xx，由调用方退回普通模式
                     add("response_format", JsonObject().apply { addProperty("type", "json_object") })
                 }
@@ -205,6 +256,10 @@ class AiChatService @Inject constructor(
             executeWithRetry(client, request).use { response ->
                 if (!response.isSuccessful) {
                     usageLogger.log(config, taskType, 0, 0)
+                    if (useJsonMode && response.code in 400..422) {
+                        // 该端点不支持 JSON 模式，记录后不再重复探 4xx
+                        jsonModeUnsupportedEndpoints.add(config.baseUrl)
+                    }
                     val message = when {
                         response.code == 401 || response.code == 403 ->
                             "API Key 无效或无权限"
@@ -229,8 +284,13 @@ class AiChatService @Inject constructor(
                 usageLogger.log(config, taskType, usage.first, usage.second)
 
                 content?.let { Result.success(it) }
-                    ?: Result.failure(IOException("AI 返回格式异常，未找到回复内容，请重试"))
+                    ?: Result.failure(
+                        AiEmptyContentException("AI 返回格式异常，未找到回复内容，请重试")
+                    )
             }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // 用户取消（如放弃拍照）必须透传，不能当普通失败跑完重试链
+            throw e
         } catch (e: Exception) {
             usageLogger.log(config, taskType, 0, 0)
             Result.failure(IOException(mapNetworkError(e)))
@@ -286,11 +346,7 @@ class AiChatService @Inject constructor(
 
         // 只有"拿到内容但解析失败"或"正文为空"才值得换格式重试；网络/配置错误直接返回
         val failure = first.exceptionOrNull()
-        val worthRetry = first.getOrNull() != null || (
-            failure is IOException &&
-                (failure.message?.contains("格式异常") == true ||
-                    failure.message?.contains("未找到回复") == true)
-            )
+        val worthRetry = first.getOrNull() != null || failure is AiEmptyContentException
         if (!worthRetry) {
             return@withContext Result.failure(
                 first.exceptionOrNull() ?: IllegalStateException(failureMsg)
@@ -579,7 +635,7 @@ class AiChatService @Inject constructor(
             array?.mapNotNull { element ->
                 try {
                     val obj = element.asJsonObject
-                    generatedFrom(obj)
+                    generatedQuestionFrom(obj)
                 } catch (e: Exception) {
                     null
                 }
@@ -592,23 +648,12 @@ class AiChatService @Inject constructor(
         // 兜底：平衡扫描逐对象恢复——数组里混入一个坏对象只影响它自己
         val recovered = extractJsonObjects(stripCodeFence(content)).mapNotNull { objStr ->
             try {
-                generatedFrom(JsonParser.parseString(objStr).asJsonObject)
+                generatedQuestionFrom(JsonParser.parseString(objStr).asJsonObject)
             } catch (e: Exception) {
                 null
             }
         }.filter { it.content.isNotBlank() }
         return recovered.takeIf { it.isNotEmpty() }
-    }
-
-    private fun generatedFrom(obj: com.google.gson.JsonObject): GeneratedQuestion? {
-        val questionContent = obj.get("content")
-            ?.takeIf { it.isJsonPrimitive }?.asString?.trim().orEmpty()
-        if (questionContent.isBlank()) return null
-        return GeneratedQuestion(
-            content = questionContent,
-            answer = obj.get("answer")?.takeIf { it.isJsonPrimitive }?.asString?.trim().orEmpty(),
-            variation = obj.get("variation")?.takeIf { it.isJsonPrimitive }?.asString?.trim().orEmpty()
-        )
     }
 
     /**

@@ -18,8 +18,10 @@ data class PracticeUiState(
     val sourceQuestion: Question? = null,
     // 生成/刷新中
     val isLoading: Boolean = true,
-    // 生成失败信息（展示重试按钮）
+    // 生成失败信息（仅在没有任何题目时展示死端错误页；
+    // 会话中刷新失败保留会话，用 refreshError 提示）
     val error: String? = null,
+    val refreshError: String? = null,
     val questions: List<GeneratedQuestion> = emptyList(),
     // 当前题目来自缓存（true）还是本次新生成（false）
     val fromCache: Boolean = false,
@@ -80,11 +82,12 @@ class PracticeViewModel @Inject constructor(
     }
 
     /**
-     * 重新生成（刷新按钮）：调 AI 出新的一组，成功后覆盖保存
+     * 重新生成（刷新按钮）：调 AI 出新的一组，成功后覆盖保存。
+     * 会话中刷新失败不销毁当前练习，改用 refreshError 提示
      */
     fun refreshQuestions() {
         if (_uiState.value.isLoading) return
-        _uiState.update { it.copy(isLoading = true, error = null) }
+        _uiState.update { it.copy(isLoading = true, error = null, refreshError = null) }
         viewModelScope.launch {
             val source = _uiState.value.sourceQuestion
                 ?: questionRepository.getQuestionById(questionId)
@@ -92,42 +95,59 @@ class PracticeViewModel @Inject constructor(
                 _uiState.update { it.copy(isLoading = false, error = "找不到这道错题") }
                 return@launch
             }
-            generateInternal(source)
+            val result = aiChatService.generateAndCacheSimilarQuestions(questionRepository, source)
+            if (result.errorMessage == null) {
+                _uiState.update {
+                    it.copy(
+                        sourceQuestion = source.copy(
+                            similarQuestionsJson = SimilarQuestionCodec.encode(result.questions)
+                        ),
+                        isLoading = false,
+                        error = null,
+                        refreshError = null,
+                        questions = result.questions
+                    ).resetSession()
+                }
+            } else {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        refreshError = if (it.questions.isNotEmpty()) {
+                            "刷新失败：${result.errorMessage}，已保留当前练习"
+                        } else {
+                            null
+                        },
+                        error = if (it.questions.isEmpty()) result.errorMessage else it.error
+                    )
+                }
+            }
         }
     }
 
     /** 调 AI 生成 → 落库 → 进入会话；失败展示重试入口 */
     private suspend fun generateInternal(source: Question) {
-        aiChatService.generateSimilarQuestions(source.content)
-            .onSuccess { questions ->
-                // 持久化：下次进入直接复用，打印也用它
-                if (questions.isNotEmpty()) {
-                    runCatching {
-                        questionRepository.updateSimilarQuestions(
-                            source.id,
-                            SimilarQuestionCodec.encode(questions)
-                        )
-                    }
-                }
-                _uiState.update {
-                    it.copy(
-                        sourceQuestion = source.copy(similarQuestionsJson = SimilarQuestionCodec.encode(questions)),
-                        isLoading = false,
-                        error = null,
-                        questions = questions,
-                        fromCache = false
-                    ).resetSession()
-                }
+        val result = aiChatService.generateAndCacheSimilarQuestions(questionRepository, source)
+        if (result.errorMessage != null) {
+            _uiState.update {
+                it.copy(
+                    sourceQuestion = source,
+                    isLoading = false,
+                    error = result.errorMessage
+                )
             }
-            .onFailure { e ->
-                _uiState.update {
-                    it.copy(
-                        sourceQuestion = source,
-                        isLoading = false,
-                        error = e.message ?: "生成失败，请重试"
-                    )
-                }
-            }
+            return
+        }
+        _uiState.update {
+            it.copy(
+                sourceQuestion = source.copy(
+                    similarQuestionsJson = SimilarQuestionCodec.encode(result.questions)
+                ),
+                isLoading = false,
+                error = null,
+                questions = result.questions,
+                fromCache = false
+            ).resetSession()
+        }
     }
 
     /** "再练一组"：同一批题从头再来（不重新生成） */

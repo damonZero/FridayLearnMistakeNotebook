@@ -83,6 +83,9 @@ fun QuestionListScreen(
                     Button(
                         onClick = {
                             pendingAction = "share"
+                            // 每次打开配置弹窗重置默认，防止上次的"强制刷新"静默覆写缓存
+                            includeSimilar = false
+                            forceRefresh = false
                             showSheetConfig = true
                         },
                         enabled = uiState.selectedIds.isNotEmpty(),
@@ -93,6 +96,8 @@ fun QuestionListScreen(
                     Button(
                         onClick = {
                             pendingAction = "print"
+                            includeSimilar = false
+                            forceRefresh = false
                             showSheetConfig = true
                         },
                         enabled = uiState.selectedIds.isNotEmpty(),

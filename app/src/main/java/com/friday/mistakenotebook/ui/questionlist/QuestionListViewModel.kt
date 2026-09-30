@@ -263,20 +263,9 @@ class QuestionListViewModel @Inject constructor(
                             _sheetState.value = SheetGenerateState.Generating(
                                 "正在生成第 ${index + 1}/${selected.size} 题的举一反三…"
                             )
-                            aiChatService.generateSimilarQuestions(q.content)
-                                .onFailure { failedCount++ }
-                                .getOrElse { emptyList() }
-                                .also { list ->
-                                    // 逐题落库：下次练习/打印直接复用
-                                    if (list.isNotEmpty()) {
-                                        runCatching {
-                                            questionRepository.updateSimilarQuestions(
-                                                q.id,
-                                                SimilarQuestionCodec.encode(list)
-                                            )
-                                        }
-                                    }
-                                }
+                            val gen = aiChatService.generateAndCacheSimilarQuestions(questionRepository, q)
+                            if (gen.errorMessage != null) failedCount++
+                            gen.questions
                         }
                     } else {
                         emptyList()

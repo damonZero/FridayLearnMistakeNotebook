@@ -26,70 +26,8 @@ class ImageUtil @Inject constructor() {
     }
 
     /**
-     * 将图片 URI 转换为 Base64 字符串。
-     * 先按 MAX_DIMENSION 计算 inSampleSize 降载解码，再矫正 EXIF 方向，
-     * 最后精确缩放并压缩，避免大图导致 OOM、上传超时或识别率下降。
-     */
-    fun uriToBase64(context: Context, uri: Uri): String? {
-        return try {
-            // 第一遍：只读尺寸，不解码像素。
-            // 注意：bounds 模式下 decodeStream 返回 null 是正常行为，不能用它的结果做非空判断！
-            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            context.contentResolver.openInputStream(uri)?.use {
-                BitmapFactory.decodeStream(it, null, bounds)
-            }
-            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
-                Log.w(TAG, "读取图片尺寸失败: $uri")
-                return null
-            }
-
-            // 第二遍：按采样率解码，控制内存
-            val options = BitmapFactory.Options().apply {
-                inSampleSize = calculateInSampleSize(bounds.outWidth, bounds.outHeight, MAX_DIMENSION)
-            }
-            val bitmap = context.contentResolver.openInputStream(uri)?.use {
-                BitmapFactory.decodeStream(it, null, options)
-            }
-            if (bitmap == null) {
-                Log.w(TAG, "图片解码失败: $uri")
-                return null
-            }
-
-            val rotated = applyExifRotation(context, uri, bitmap)
-            val scaled = scaleDown(rotated, MAX_DIMENSION)
-            // 极端长宽比（竖长小票/试卷切图 >2:1）：保证短边不低于 1024，
-            // 否则等比缩放后文字过小、视觉模型识别率骤降
-            val ocrReady = fitExtremeAspect(scaled)
-            bitmapToBase64(ocrReady)
-        } catch (e: Exception) {
-            Log.e(TAG, "图片转 Base64 异常: ${e.message}")
-            null
-        }
-    }
-
-    /**
-     * 极端长宽比矫正：长宽比 >2:1 时把短边放大到 1024（长边上限 4096）。
-     * 动态分辨率视觉模型对像素多的区域分配更多编码，放大能显著提升竖长图的可读性
-     */
-    private fun fitExtremeAspect(bitmap: Bitmap): Bitmap {
-        val longSide = maxOf(bitmap.width, bitmap.height)
-        val shortSide = minOf(bitmap.width, bitmap.height)
-        if (longSide / shortSide.toFloat() <= 2f || shortSide >= 1024) return bitmap
-
-        var scale = 1024f / shortSide
-        val newLong = (longSide * scale).toInt()
-        if (newLong > 4096) scale *= 4096f / newLong
-        return Bitmap.createScaledBitmap(
-            bitmap,
-            (bitmap.width * scale).toInt().coerceAtLeast(1),
-            (bitmap.height * scale).toInt().coerceAtLeast(1),
-            true
-        )
-    }
-
-    /**
-     * 解码图片用于原图留存：采样降载 + EXIF 方向矫正 + 精确缩放到 maxDimension 内。
-     * 与 uriToBase64 的区别：返回 Bitmap（存盘展示用），不转 Base64
+     * 解码图片：采样降载 + EXIF 方向矫正 + 长宽比增强 + 精确缩放。
+     * 结果同时用于 OCR 送检（bitmapToBase64）与原图存盘
      */
     fun decodeForSave(context: Context, uri: Uri, maxDimension: Int): Bitmap? {
         return try {
@@ -114,11 +52,32 @@ class ImageUtil @Inject constructor() {
                 return null
             }
 
-            scaleDown(applyExifRotation(context, uri, bitmap), maxDimension)
+            // 极端长宽比增强放在缩放之后：竖长小票/试卷切图短边保底 1024，识别率才够
+            fitExtremeAspect(scaleDown(applyExifRotation(context, uri, bitmap), maxDimension))
         } catch (e: Exception) {
             Log.e(TAG, "图片解码异常: ${e.message}")
             null
         }
+    }
+
+    /**
+     * 极端长宽比矫正：长宽比 >2:1 时把短边放大到 1024（长边上限 4096）。
+     * 竖长小票/试卷切图按常规长边缩放后文字过小，视觉模型识别率骤降
+     */
+    private fun fitExtremeAspect(bitmap: Bitmap): Bitmap {
+        val longSide = maxOf(bitmap.width, bitmap.height)
+        val shortSide = minOf(bitmap.width, bitmap.height)
+        if (longSide / shortSide.toFloat() <= 2f || shortSide >= 1024) return bitmap
+
+        var scale = 1024f / shortSide
+        val newLong = (longSide * scale).toInt()
+        if (newLong > 4096) scale *= 4096f / newLong
+        return Bitmap.createScaledBitmap(
+            bitmap,
+            (bitmap.width * scale).toInt().coerceAtLeast(1),
+            (bitmap.height * scale).toInt().coerceAtLeast(1),
+            true
+        )
     }
 
     private fun calculateInSampleSize(width: Int, height: Int, maxDimension: Int): Int {
