@@ -169,9 +169,9 @@
 
 | 任务 | 推荐模型 | 备选模型 | 说明 |
 |------|----------|----------|------|
-| **OCR 识别** | 火山方舟 (豆包 Vision) | 百度 OCR、GPT-4 Vision | 中文手写识别最强 |
-| **错题分析** | DeepSeek | Claude、GPT-4 | 性价比高，中文好 |
-| **生成相似题** | DeepSeek | Claude、GPT-4 | 同上 |
+| **OCR 识别** | DeepSeek deepseek-v4-flash-vision-exp | 火山方舟 (豆包 Vision)、GPT-4 Vision | 2026-09-30 起默认全切 DeepSeek（官网一个 Key 全搞定），实验版模型，手写/公式准确率需实际观察，不理想时 OCR 切回豆包 |
+| **错题分析** | DeepSeek deepseek-v4-flash | Claude、GPT-4 | 同一 Key，性价比高 |
+| **生成相似题** | DeepSeek deepseek-v4-flash | Claude、GPT-4 | 同上 |
 | **复习排期** | 本地算法 | — | 艾宾浩斯+莱特纳，不需要 AI |
 
 ### 3.2 Token 价格参考（每 1000 tokens）

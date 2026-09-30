@@ -57,14 +57,16 @@ class AiUsageLogger @Inject constructor(private val aiUsageLogDao: AiUsageLogDao
     }
 
     /**
-     * 按模型名估算本次费用（元），单价由 REQUIREMENTS.md §3.2 的每 1000 tokens 参考价换算：
-     * 豆包(火山方舟) 输入 0.008/输出 0.02，DeepSeek 输入 0.001/输出 0.002，其他模型不计费
+     * 按模型名估算本次费用（元），单价由各官方每 100 万 tokens 定价换算：
+     * DeepSeek V4-Flash（含 vision-exp，2026-09-10 起空闲时段）：输入 ¥1/M、输出 ¥4/M（高峰时段 ×2，此处按空闲估）
+     * 豆包(火山方舟)：输入 ¥8/M、输出 ¥20/M
+     * 其他模型不计费
      */
     private fun estimateCost(modelName: String, inputTokens: Int, outputTokens: Int): Double {
         val (inputPrice, outputPrice) = when {
+            modelName.contains("deepseek", ignoreCase = true) -> 0.000001 to 0.000004
             modelName.contains("doubao", ignoreCase = true) ||
                 modelName.contains("ep-") -> 0.000008 to 0.00002
-            modelName.contains("deepseek", ignoreCase = true) -> 0.000001 to 0.000002
             else -> 0.0 to 0.0
         }
         return inputTokens * inputPrice + outputTokens * outputPrice

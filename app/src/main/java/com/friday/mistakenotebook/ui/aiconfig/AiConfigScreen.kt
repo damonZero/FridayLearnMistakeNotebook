@@ -107,6 +107,7 @@ fun AiConfigScreen(
             AiConfigDialog(
                 uiState = uiState,
                 onProviderChange = { viewModel.updateProvider(it) },
+                onProviderTemplate = { viewModel.applyProviderTemplate(it) },
                 onApiKeyChange = { viewModel.updateApiKey(it) },
                 onBaseUrlChange = { viewModel.updateBaseUrl(it) },
                 onModelNameChange = { viewModel.updateModelName(it) },
@@ -215,6 +216,7 @@ fun AiConfigCard(
 fun AiConfigDialog(
     uiState: AiConfigUiState,
     onProviderChange: (String) -> Unit,
+    onProviderTemplate: (String) -> Unit,
     onApiKeyChange: (String) -> Unit,
     onBaseUrlChange: (String) -> Unit,
     onModelNameChange: (String) -> Unit,
@@ -230,6 +232,22 @@ fun AiConfigDialog(
         },
         text = {
             Column {
+                // 供应商快捷模板：一键预填 Base URL 与推荐模型
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf("DeepSeek", "火山方舟").forEach { name ->
+                        FilterChip(
+                            selected = uiState.provider == name,
+                            onClick = { onProviderTemplate(name) },
+                            label = { Text(name, fontSize = 12.sp) }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
                 // 提供商
                 OutlinedTextField(
                     value = uiState.provider,

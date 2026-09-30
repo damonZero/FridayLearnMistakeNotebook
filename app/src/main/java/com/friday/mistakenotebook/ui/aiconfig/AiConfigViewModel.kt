@@ -12,15 +12,23 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/** 供应商快捷模板：一键预填 Base URL 与各任务的推荐模型 */
+data class ProviderTemplate(
+    val name: String,
+    val baseUrl: String,
+    val visionModel: String,
+    val textModel: String
+)
+
 data class AiConfigUiState(
     val configs: List<AiConfigEntity> = emptyList(),
     val isLoading: Boolean = true,
     val showAddDialog: Boolean = false,
     val editingConfig: AiConfigEntity? = null,
-    val provider: String = "火山方舟",
+    val provider: String = "DeepSeek",
     val apiKey: String = "",
-    val baseUrl: String = "https://ark.cn-beijing.volces.com/api/v3",
-    val modelName: String = "doubao-vision-pro-32k",
+    val baseUrl: String = "https://api.deepseek.com",
+    val modelName: String = "deepseek-v4-flash-vision-exp",
     val taskType: AiTaskType = AiTaskType.OCR,
     val testResult: TestResult? = null,
     val isTesting: Boolean = false
@@ -56,10 +64,10 @@ class AiConfigViewModel @Inject constructor(
             it.copy(
                 showAddDialog = true,
                 editingConfig = null,
-                provider = "火山方舟",
+                provider = "DeepSeek",
                 apiKey = "",
-                baseUrl = "https://ark.cn-beijing.volces.com/api/v3",
-                modelName = "doubao-vision-pro-32k",
+                baseUrl = "https://api.deepseek.com",
+                modelName = "deepseek-v4-flash-vision-exp",
                 taskType = AiTaskType.OCR,
                 testResult = null,
                 isTesting = false
@@ -98,6 +106,19 @@ class AiConfigViewModel @Inject constructor(
         _uiState.update { it.copy(provider = provider) }
     }
 
+    /** 供应商模板：一键预填 Base URL 与当前任务的推荐模型 */
+    fun applyProviderTemplate(provider: String) {
+        val template = providerTemplates.firstOrNull { it.name == provider } ?: return
+        _uiState.update { st ->
+            st.copy(
+                provider = template.name,
+                baseUrl = template.baseUrl,
+                modelName = if (st.taskType == AiTaskType.OCR) template.visionModel else template.textModel,
+                testResult = null
+            )
+        }
+    }
+
     fun updateApiKey(apiKey: String) {
         _uiState.update { it.copy(apiKey = apiKey, testResult = null) }
     }
@@ -111,12 +132,25 @@ class AiConfigViewModel @Inject constructor(
     }
 
     fun updateTaskType(taskType: AiTaskType) {
-        _uiState.update { it.copy(taskType = taskType) }
+        _uiState.update { st ->
+            val template = providerTemplates.firstOrNull { it.name == st.provider }
+            if (template == null || st.editingConfig != null) {
+                return@update st.copy(taskType = taskType)
+            }
+            // 仅当模型名还是模板默认值时跟随任务类型切换，不覆盖用户手输的模型
+            val currentIsTemplateDefault =
+                st.modelName == template.visionModel || st.modelName == template.textModel
+            val suggested = if (taskType == AiTaskType.OCR) template.visionModel else template.textModel
+            st.copy(
+                taskType = taskType,
+                modelName = if (currentIsTemplateDefault) suggested else st.modelName
+            )
+        }
     }
 
     fun saveConfig() {
         val state = _uiState.value
-        val provider = state.provider.trim().ifBlank { "火山方舟" }
+        val provider = state.provider.trim().ifBlank { "DeepSeek" }
         val apiKey = state.apiKey.trim()
         val baseUrl = state.baseUrl.trim()
         val modelName = state.modelName.trim()
@@ -194,5 +228,27 @@ class AiConfigViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    companion object {
+        /**
+         * 2026-09-30 起默认供应商切为 DeepSeek：
+         * 识图用 deepseek-v4-flash-vision-exp（实验版视觉模型，价格约为豆包的 1/10），
+         * 推理/出题用 deepseek-v4-flash；火山方舟保留为备选模板
+         */
+        val providerTemplates = listOf(
+            ProviderTemplate(
+                name = "DeepSeek",
+                baseUrl = "https://api.deepseek.com",
+                visionModel = "deepseek-v4-flash-vision-exp",
+                textModel = "deepseek-v4-flash"
+            ),
+            ProviderTemplate(
+                name = "火山方舟",
+                baseUrl = "https://ark.cn-beijing.volces.com/api/v3",
+                visionModel = "doubao-vision-pro-32k",
+                textModel = "doubao-pro-32k"
+            )
+        )
     }
 }
