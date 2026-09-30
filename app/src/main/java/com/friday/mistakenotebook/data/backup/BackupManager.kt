@@ -15,7 +15,6 @@ import com.google.gson.Gson
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.SimpleDateFormat
@@ -83,12 +82,8 @@ class BackupManager @Inject constructor(
      */
     private suspend fun readAllTables(): BackupData = database.withTransaction {
         val subjects = database.subjectDao().getAllSubjectsList()
-        val chapters = subjects.flatMap { subject ->
-            database.chapterDao().getChaptersBySubject(subject.id).first()
-        }
-        val knowledgePoints = chapters.flatMap { chapter ->
-            database.knowledgePointDao().getKnowledgePointsByChapter(chapter.id).first()
-        }
+        val chapters = database.chapterDao().getAllChaptersList()
+        val knowledgePoints = database.knowledgePointDao().getAllKnowledgePointsList()
 
         BackupData(
             version = BACKUP_VERSION,
@@ -98,7 +93,7 @@ class BackupManager @Inject constructor(
             questions = database.questionDao().getAllQuestionsList(),
             // 隐私安全：导出的备份一律不携带 apiKey
             aiConfigs = database.aiConfigDao().getAllAiConfigsList().map { it.copy(apiKey = "") },
-            aiUsageLogs = database.aiUsageLogDao().getAllUsageLogs().first()
+            aiUsageLogs = database.aiUsageLogDao().getAllUsageLogsList()
         )
     }
 

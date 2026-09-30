@@ -10,6 +10,9 @@ interface ChapterDao {
     @Query("SELECT * FROM chapters WHERE subjectId = :subjectId ORDER BY name ASC")
     fun getChaptersBySubject(subjectId: Long): Flow<List<ChapterEntity>>
 
+    @Query("SELECT * FROM chapters ORDER BY subjectId ASC, name ASC")
+    suspend fun getAllChaptersList(): List<ChapterEntity>
+
     @Query("SELECT * FROM chapters WHERE id = :id")
     suspend fun getChapterById(id: Long): ChapterEntity?
 

@@ -10,6 +10,9 @@ interface KnowledgePointDao {
     @Query("SELECT * FROM knowledge_points WHERE chapterId = :chapterId ORDER BY name ASC")
     fun getKnowledgePointsByChapter(chapterId: Long): Flow<List<KnowledgePointEntity>>
 
+    @Query("SELECT * FROM knowledge_points ORDER BY chapterId ASC, name ASC")
+    suspend fun getAllKnowledgePointsList(): List<KnowledgePointEntity>
+
     @Query("SELECT * FROM knowledge_points WHERE id = :id")
     suspend fun getKnowledgePointById(id: Long): KnowledgePointEntity?
 
