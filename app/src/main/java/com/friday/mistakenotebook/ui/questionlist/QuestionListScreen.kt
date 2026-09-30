@@ -40,6 +40,9 @@ fun QuestionListScreen(
     val uiState by viewModel.uiState.collectAsState()
     val sheetState by viewModel.sheetState.collectAsState()
     val context = LocalContext.current
+    var showSheetConfig by remember { mutableStateOf(false) }
+    var includeSimilar by remember { mutableStateOf(false) }
+    var forceRefresh by remember { mutableStateOf(false) }
 
     LaunchedEffect(subjectId) {
         viewModel.selectSubject(if (subjectId == -1L) null else subjectId)
@@ -59,10 +62,7 @@ fun QuestionListScreen(
                         TextButton(onClick = { viewModel.selectAllVisible() }) {
                             Text("全选")
                         }
-                        TextButton(
-                            onClick = { viewModel.generateSheet(includeSimilar = false) },
-                            enabled = uiState.selectedIds.isNotEmpty()
-                        ) {
+                        TextButton(onClick = { showSheetConfig = true }) {
                             Text("生成练习卷")
                         }
                     },
@@ -255,6 +255,51 @@ fun QuestionListScreen(
                 }
             }
         }
+    }
+
+    // 练习卷生成配置
+    if (showSheetConfig) {
+        AlertDialog(
+            onDismissRequest = { showSheetConfig = false },
+            title = { Text("生成练习卷（${uiState.selectedIds.size} 题）") },
+            text = {
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(
+                            checked = includeSimilar,
+                            onCheckedChange = {
+                                includeSimilar = it
+                                if (!it) forceRefresh = false
+                            }
+                        )
+                        Text("含举一反三（无缓存的题现场生成）", fontSize = 14.sp)
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(
+                            checked = forceRefresh,
+                            onCheckedChange = { forceRefresh = it },
+                            enabled = includeSimilar
+                        )
+                        Text("强制重新生成（忽略已保存）", fontSize = 14.sp)
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        "答案卷（家长留存）会同时生成，含 AI 分析。",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showSheetConfig = false
+                    viewModel.generateSheet(includeSimilar, forceRefresh)
+                }) { Text("开始生成") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSheetConfig = false }) { Text("取消") }
+            }
+        )
     }
 
     // 练习卷生成状态弹窗

@@ -228,9 +228,10 @@ class QuestionListViewModel @Inject constructor(
     }
 
     /**
-     * 批量生成练习卷：默认只印原错题+作答区；includeSimilar 时逐题调 AI 生成举一反三
+     * 批量生成练习卷。includeSimilar 时优先复用已保存的举一反三，
+     * 只有没缓存的题才现场生成（forceRefresh=true 则全部重新生成并覆盖）
      */
-    fun generateSheet(includeSimilar: Boolean) {
+    fun generateSheet(includeSimilar: Boolean, forceRefresh: Boolean = false) {
         val ids = _uiState.value.selectedIds
         if (ids.isEmpty()) return
         if (_sheetState.value is SheetGenerateState.Generating) return
@@ -245,23 +246,38 @@ class QuestionListViewModel @Inject constructor(
                 var failedCount = 0
                 val items = selected.mapIndexed { index, q ->
                     val similar = if (includeSimilar) {
-                        _sheetState.value = SheetGenerateState.Generating(
-                            "正在生成第 ${index + 1}/${selected.size} 题的举一反三…"
-                        )
-                        aiChatService.generateSimilarQuestions(q.content)
-                            .onFailure { failedCount++ }
-                            .getOrElse { emptyList() }
-                            .also { list ->
-                                // 逐题落库：下次练习/打印直接复用
-                                if (list.isNotEmpty()) {
-                                    runCatching {
-                                        questionRepository.updateSimilarQuestions(
-                                            q.id,
-                                            SimilarQuestionCodec.encode(list)
-                                        )
+                        val cached = if (forceRefresh) {
+                            emptyList()
+                        } else {
+                            q.similarQuestionsJson
+                                ?.takeIf { it.isNotBlank() }
+                                ?.let { SimilarQuestionCodec.decode(it) }
+                                .orEmpty()
+                        }
+                        if (cached.isNotEmpty()) {
+                            _sheetState.value = SheetGenerateState.Generating(
+                                "第 ${index + 1}/${selected.size} 题：使用已保存的举一反三…"
+                            )
+                            cached
+                        } else {
+                            _sheetState.value = SheetGenerateState.Generating(
+                                "正在生成第 ${index + 1}/${selected.size} 题的举一反三…"
+                            )
+                            aiChatService.generateSimilarQuestions(q.content)
+                                .onFailure { failedCount++ }
+                                .getOrElse { emptyList() }
+                                .also { list ->
+                                    // 逐题落库：下次练习/打印直接复用
+                                    if (list.isNotEmpty()) {
+                                        runCatching {
+                                            questionRepository.updateSimilarQuestions(
+                                                q.id,
+                                                SimilarQuestionCodec.encode(list)
+                                            )
+                                        }
                                     }
                                 }
-                            }
+                        }
                     } else {
                         emptyList()
                     }
