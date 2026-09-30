@@ -52,7 +52,7 @@ fun AddQuestionScreen(
             val imagePath = savedStateHandle?.get<String>("ocr_image_path")
             val answer = savedStateHandle?.get<String>("ocr_answer")
             val userAnswer = savedStateHandle?.get<String>("ocr_user_answer")
-            viewModel.createQuestionDraftFromOcr(result, imagePath, answer, userAnswer)
+            viewModel.createQuestionDraftFromOcr(result, imagePath, answer.orEmpty(), userAnswer.orEmpty())
             savedStateHandle?.remove<String>("ocr_result")
             savedStateHandle?.remove<String>("ocr_image_path")
             savedStateHandle?.remove<String>("ocr_answer")
