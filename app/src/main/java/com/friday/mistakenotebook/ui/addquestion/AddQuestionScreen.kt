@@ -99,16 +99,33 @@ fun AddQuestionScreen(
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
-            LazyRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(uiState.subjects) { subject ->
-                    FilterChip(
-                        selected = uiState.selectedSubjectId == subject.id,
-                        onClick = { viewModel.selectSubject(subject.id) },
-                        label = { Text("${subject.icon} ${subject.name}") }
+            if (uiState.subjects.isEmpty()) {
+                // 防御性引导：预设科目会在应用启动时播种；走到这里说明用户手动清空了科目
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
                     )
+                ) {
+                    Text(
+                        text = "还没有科目，无法录入错题。\n请先到底部「科目」页添加科目（首次使用会自动创建语文/数学/英语）。",
+                        modifier = Modifier.padding(16.dp),
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            } else {
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(uiState.subjects) { subject ->
+                        FilterChip(
+                            selected = uiState.selectedSubjectId == subject.id,
+                            onClick = { viewModel.selectSubject(subject.id) },
+                            label = { Text("${subject.icon} ${subject.name}") }
+                        )
+                    }
                 }
             }
 

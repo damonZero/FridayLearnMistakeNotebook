@@ -1,7 +1,9 @@
 package com.friday.mistakenotebook
 
 import android.app.Application
+import android.util.Log
 import com.friday.mistakenotebook.data.local.dao.QuestionDao
+import com.friday.mistakenotebook.domain.repository.SubjectRepository
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -16,11 +18,26 @@ class FridayNotebookApp : Application() {
     @Inject
     lateinit var questionDao: QuestionDao
 
+    @Inject
+    lateinit var subjectRepository: SubjectRepository
+
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onCreate() {
         super.onCreate()
+        seedPresetSubjects()
         cleanupOrphanImages()
+    }
+
+    /**
+     * 预设科目播种必须在应用启动时完成：启动页是"复习"，
+     * 用户可能从不经过首页，若播种挂在首页 ViewModel 会导致录入页无科目可选
+     */
+    private fun seedPresetSubjects() {
+        appScope.launch {
+            runCatching { subjectRepository.initPresetSubjects() }
+                .onFailure { Log.w("FridayApp", "预设科目播种失败: ${it.message}") }
+        }
     }
 
     /**

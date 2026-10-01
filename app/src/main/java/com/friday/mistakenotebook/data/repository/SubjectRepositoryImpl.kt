@@ -44,7 +44,12 @@ class SubjectRepositoryImpl @Inject constructor(
         return deletedRows > 0
     }
 
+    // 进程内防重入：播种逻辑现由 Application 启动触发（不再依赖用户经过首页），
+    // 加护栏避免 Home 等入口并发重复调用
+    private val presetSeeded = java.util.concurrent.atomic.AtomicBoolean(false)
+
     override suspend fun initPresetSubjects() {
+        if (!presetSeeded.compareAndSet(false, true)) return
         val count = subjectDao.getSubjectCount()
         if (count == 0) {
             val presets = listOf(
