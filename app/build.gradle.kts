@@ -98,6 +98,9 @@ dependencies {
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
+    // WorkManager（每日复习提醒的可靠调度）
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+
     // DataStore for preferences
     implementation("androidx.datastore:datastore-preferences:1.0.0")
 

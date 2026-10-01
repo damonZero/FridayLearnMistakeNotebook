@@ -12,15 +12,20 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import com.friday.mistakenotebook.print.SheetGenerateState
+import com.friday.mistakenotebook.print.printExerciseSheet
+import com.friday.mistakenotebook.print.shareSheetFile
 import com.friday.mistakenotebook.ui.navigation.Screen
 import com.friday.mistakenotebook.ui.theme.*
 import java.io.File
+import java.io.IOException
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,6 +34,8 @@ fun ReviewScreen(
     viewModel: ReviewViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val sheetState by viewModel.sheetState.collectAsState()
+    val context = LocalContext.current
     var showExitDialog by remember { mutableStateOf(false) }
 
     // 会话进行中且未完成时，拦截系统返回键
@@ -41,9 +48,19 @@ fun ReviewScreen(
         topBar = {
             TopAppBar(
                 title = { Text("复习", fontWeight = FontWeight.Bold) },
+                actions = {
+                    // 打印今日待复习卷：全部到期错题（含已保存举一反三）一卷打尽
+                    IconButton(
+                        onClick = { viewModel.printDueSheet() },
+                        enabled = !uiState.isLoading && !uiState.isSubmitting
+                    ) {
+                        Icon(Icons.Default.Print, contentDescription = "打印今日待复习卷")
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
                 )
             )
         }
@@ -86,6 +103,75 @@ fun ReviewScreen(
                 )
             }
         }
+    }
+
+    // 今日待复习卷生成状态弹窗
+    when (val st = sheetState) {
+        is SheetGenerateState.Generating -> {
+            AlertDialog(
+                onDismissRequest = {},
+                title = { Text("正在生成练习卷") },
+                text = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(st.progress, fontSize = 14.sp)
+                    }
+                },
+                confirmButton = {}
+            )
+        }
+        is SheetGenerateState.Ready -> {
+            AlertDialog(
+                onDismissRequest = { viewModel.consumeSheetState() },
+                title = { Text("今日待复习卷已生成") },
+                text = {
+                    Column {
+                        Text(
+                            "全部到期错题（含已保存的举一反三）已生成练习卷与答案卷。\n分享到微信打印；孩子做完后在会话里逐题标\"会了/还错\"回录。",
+                            fontSize = 14.sp
+                        )
+                        st.note?.let {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(it, fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        shareSheetFile(context, st.files.exerciseSheet)
+                    }) { Text("发练习卷") }
+                },
+                dismissButton = {
+                    Column(horizontalAlignment = Alignment.End) {
+                        TextButton(onClick = {
+                            shareSheetFile(context, st.files.answerSheet)
+                        }) { Text("发答案卷") }
+                        Row {
+                            TextButton(onClick = {
+                                printExerciseSheet(context, st.files.exerciseSheet)
+                                viewModel.consumeSheetState()
+                            }) { Text("直接打印") }
+                            TextButton(onClick = { viewModel.consumeSheetState() }) { Text("完成") }
+                        }
+                    }
+                }
+            )
+        }
+        is SheetGenerateState.Failed -> {
+            AlertDialog(
+                onDismissRequest = { viewModel.consumeSheetState() },
+                title = { Text("生成失败") },
+                text = { Text(st.message) },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.consumeSheetState() }) { Text("知道了") }
+                }
+            )
+        }
+        SheetGenerateState.Idle -> {}
     }
 
     if (showExitDialog && inSession) {
